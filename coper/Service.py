@@ -9,7 +9,7 @@ from core.Computable import Computable
 class Service(Computable):
 
     def __init__(self, service_id):
-        super().__init__()
+        super().__init__(service_id)
         self.service_id = service_id
 
 

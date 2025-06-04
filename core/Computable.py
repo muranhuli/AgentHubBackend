@@ -12,10 +12,11 @@ class Computable:
     调用时自动使用当前 Runner，上下文管理无需 await。
     """
 
-    def __init__(self):
+    def __init__(self, *args):
         self.ctx = get_context()
         self.redis = self.ctx.redis
         self.ch = self.ctx.channel
+        self.init_args = args
 
     def __call__(self, *args):
         task_id = self.ctx.task
@@ -39,7 +40,7 @@ class Computable:
             "task_id": task_id,
             "task": self.__class__.__name__,
             "args": arg_list,
-            "service_id": self.service_id if hasattr(self, 'service_id') else None,
+            "init_args": self.init_args,
         }
 
         dep = ",".join(str(dep) for dep in dep_list)

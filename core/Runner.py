@@ -65,15 +65,15 @@ class Runner:
             # 动态加载 operator 并执行
             module = importlib.import_module(f"coper.{job['task']}")
             cls = getattr(module, job["task"])
-            if "service_id" in job:
-                res = cls(job["service_id"]).compute(*args)
+            if "init_args" in job:
+                res = cls(*job["init_args"]).compute(*args)
             else:
                 res = cls().compute(*args)
         except Exception as e:
             self.redis.hset(task_key, f"state:{exec_id}", "ERROR")
             self.redis.lpush(result_key, json.dumps({"data": str(e)}))
             ch.basic_ack(delivery_tag=method.delivery_tag)
-            raise RuntimeError(f"任务 {exec_id} 执行失败: {e}")
+            # raise RuntimeError(f"任务 {exec_id} 执行失败: {e}")
         else:
             # 成功
             if isinstance(res, ComputableResult):
@@ -116,7 +116,7 @@ if __name__ == "__main__":
 
 
     mpl = []
-    for _ in range(1):
+    for _ in range(16):
         p = multiprocessing.Process(target=run)
         p.start()
         mpl.append(p)
