@@ -1,6 +1,8 @@
 import json
 import uuid
 
+import pika
+
 from core.Computable import Computable
 
 
@@ -22,7 +24,7 @@ class Service(Computable):
             exchange='',
             routing_key=f"service.request.{self.service_id}",
             body=json.dumps(request),
-            properties=self.ch.Properties(
+            properties=pika.BasicProperties(
                 delivery_mode=2
             )
         )

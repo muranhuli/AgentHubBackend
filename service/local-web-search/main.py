@@ -174,52 +174,75 @@ class SearchEngine:
 
 class PageArchiver:
     """
-    并发访问 URL 列表，将每个页面保存为 HTML 并转换为 Markdown 文本
+    Concurrently visit a list of URLs, save each page’s HTML,
+    convert it to Markdown, and return the Markdown content.
+    The output directory is always 'output' in the same folder as this script.
     """
 
-    def __init__(self, output_dir: str = "output"):
-        os.makedirs(output_dir, exist_ok=True)
-        self.output_dir = output_dir
+    def __init__(self):
+        # Determine the directory of the current script file
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        # Create (or reuse) an 'output' folder next to this script
+        output_directory = os.path.join(script_directory, "output")
+        os.makedirs(output_directory, exist_ok=True)
 
-    async def _archive_single(self, context: BrowserContext, url: str, prefix: str, idx: int) -> str:
+        self.output_dir = output_directory
+
+    async def _archive_single(
+            self,
+            context: BrowserContext,
+            url: str,
+            prefix: str,
+            index: int
+    ) -> str:
         """
-        1. 等待一定时延后打开新页面访问 URL
-        2. 保存 HTML，并转换为 Markdown 文本
-        3. 返回对应的 Markdown 文本文件路径
+        1. Wait for a brief delay before opening a new page to fetch the URL.
+        2. Save the raw HTML to a file and convert it to Markdown.
+        3. Return the Markdown content as a string.
         """
-        await asyncio.sleep(idx * 0.5)
+        # Stagger requests by half a second per index to limit simultaneous load
+        await asyncio.sleep(index * 0.5)
         page: Page = await context.new_page()
+
         try:
             await page.goto(url, timeout=60000)
             await page.wait_for_load_state("domcontentloaded")
-            web_raw = await page.content()
+            raw_html = await page.content()
 
-            html_name = f"{prefix}_page_{idx + 1}.html"
-            md_name = f"{prefix}_page_{idx + 1}.md"
+            html_filename = f"{prefix}_page_{index + 1}.html"
+            md_filename = f"{prefix}_page_{index + 1}.md"
 
-            html_path = os.path.join(self.output_dir, html_name)
-            with open(html_path, "w", encoding="utf-8") as f:
-                f.write(web_raw)
+            html_path = os.path.join(self.output_dir, html_filename)
+            with open(html_path, "w", encoding="utf-8") as html_file:
+                html_file.write(raw_html)
 
-            md = MarkItDown(enable_plugins=False)
-            result = md.convert(html_path)
-            content_md = result.text_content  # 转换后的 Markdown 文本
+            converter = MarkItDown(enable_plugins=False)
+            conversion_result = converter.convert(html_path)
+            markdown_text = conversion_result.text_content
 
-            md_path = os.path.join(self.output_dir, md_name)
-            with open(md_path, "w", encoding="utf-8") as f:
-                f.write(content_md)
+            md_path = os.path.join(self.output_dir, md_filename)
+            with open(md_path, "w", encoding="utf-8") as md_file:
+                md_file.write(markdown_text)
 
-            print(f"Saved: {md_path}")
-            return content_md
-        except Exception as e:
-            print(f"[Error] Failed to archive {url}: {e}")
+            print(f"[Info] Saved Markdown: {md_path}")
+            return markdown_text
+
+        except Exception as error:
+            print(f"[Error] Failed to archive {url}: {error}")
             return ""
+
         finally:
             await page.close()
 
-    async def archive(self, context: BrowserContext, results: List[Dict[str, str]], prefix: str) -> List[str]:
+    async def archive(
+            self,
+            context: BrowserContext,
+            results: List[Dict[str, str]],
+            prefix: str
+    ) -> List[str]:
         """
-        为每条结果并发调用 _archive_single，将 Markdown 文本收集并返回
+        For each item in 'results', run _archive_single concurrently.
+        Collect and return a list of Markdown contents.
         """
         tasks = [
             self._archive_single(context, item["url"], prefix, idx)

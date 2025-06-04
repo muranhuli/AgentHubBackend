@@ -65,7 +65,10 @@ class Runner:
             # 动态加载 operator 并执行
             module = importlib.import_module(f"coper.{job['task']}")
             cls = getattr(module, job["task"])
-            res = cls().compute(*args)
+            if "service_id" in job:
+                res = cls(job["service_id"]).compute(*args)
+            else:
+                res = cls().compute(*args)
         except Exception as e:
             self.redis.hset(task_key, f"state:{exec_id}", "ERROR")
             self.redis.lpush(result_key, json.dumps({"data": str(e)}))

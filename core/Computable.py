@@ -38,7 +38,8 @@ class Computable:
             "exec_id": exec_id,
             "task_id": task_id,
             "task": self.__class__.__name__,
-            "args": arg_list
+            "args": arg_list,
+            "service_id": self.service_id if hasattr(self, 'service_id') else None,
         }
 
         dep = ",".join(str(dep) for dep in dep_list)
