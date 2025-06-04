@@ -189,11 +189,11 @@ class PageArchiver:
     The output directory is always 'output' in the same folder as this script.
     """
 
-    def __init__(self):
+    def __init__(self, output_dir: str = "output"):
         # Determine the directory of the current script file
         script_directory = os.path.dirname(os.path.abspath(__file__))
         # Create (or reuse) an 'output' folder next to this script
-        output_directory = os.path.join(script_directory, "output")
+        output_directory = os.path.join(script_directory, output_dir)
         os.makedirs(output_directory, exist_ok=True)
 
         self.output_dir = output_directory
