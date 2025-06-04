@@ -1,6 +1,7 @@
 import asyncio
 import json
 import platform
+import re
 from pathlib import Path
 from typing import List, Dict
 from urllib.parse import quote_plus
@@ -172,6 +173,15 @@ class SearchEngine:
             await page.close()
 
 
+def sanitize(name: str) -> str:
+    """
+    Remove any character that is not a letter, number, underscore, or hyphen.
+    That prevents invalid filename characters (< > : " / \\ | ? * etc.).
+    """
+    # Keep only ASCII letters, digits, underscore, and hyphen
+    return re.sub(r'[^A-Za-z0-9_-]', '', name)
+
+
 class PageArchiver:
     """
     Concurrently visit a list of URLs, save each page’s HTML,
@@ -208,6 +218,8 @@ class PageArchiver:
             await page.goto(url, timeout=60000)
             await page.wait_for_load_state("domcontentloaded")
             raw_html = await page.content()
+
+            prefix = sanitize(prefix)
 
             html_filename = f"{prefix}_page_{index + 1}.html"
             md_filename = f"{prefix}_page_{index + 1}.md"
