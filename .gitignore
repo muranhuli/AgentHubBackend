@@ -1,0 +1,7 @@
+.env
+.idea/
+node_modules
+middleware/mysql
+middleware/rabbitmq
+middleware/redis
+middleware/minio

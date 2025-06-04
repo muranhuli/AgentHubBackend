@@ -1,0 +1,66 @@
+services:
+  mysql:
+    image: mysql:8
+    container_name: agent-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: Asia/Shanghai
+    ports:
+      - "${MYSQL_PORT}:3306"
+    volumes:
+      - ./mysql/data:/var/lib/mysql
+      - ./mysql/conf.d:/etc/mysql/conf.d
+      - ./mysql/logs:/var/log/mysql
+      - /etc/localtime:/etc/localtime:ro
+
+  redis:
+    image: redis:8
+    container_name: agent-redis
+    restart: always
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - ./redis/data:/data
+    command: >
+      redis-server
+      --requirepass "${REDIS_PASSWORD}"
+      --bind 0.0.0.0
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --appendonly yes
+      --appendfilename "appendonly.aof"
+      --dir /data
+      --loglevel warning
+
+  rabbitmq:
+    image: rabbitmq:4.1.0-management
+    container_name: agent-rabbitmq
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      TZ: Asia/Shanghai
+    ports:
+      - "${RABBITMQ_WEB_PORT}:15672"  # Web 管理界面
+      - "${RABBITMQ_PORT}:5672"    # AMQP 协议端口
+    volumes:
+      - ./rabbitmq/data:/var/lib/rabbitmq
+      - /etc/localtime:/etc/localtime:ro
+
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-05-24T17-08-30Z
+    container_name: agent-minio
+    restart: always
+    ports:
+      - "${MINIO_API_PORT}:9000"  # S3 API 端口
+      - "${MINIO_CONSOLE_PORT}:9001"  # 控制台端口
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      TZ: Asia/Shanghai
+    volumes:
+      - ./minio/data:/data
+      - /etc/localtime:/etc/localtime:ro
+    command: server /data --console-address ":9001"

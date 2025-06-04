@@ -1,0 +1,182 @@
+import json
+from core.Context import get_context
+
+# 逻辑非运算（不能重载 not，提供方法代替）
+def logical_not(self):
+    from coper.LogicalNot import LogicalNot
+    return LogicalNot()(self)
+
+# 显式逻辑与/或（不能重载 and/or）
+def logical_and(self, other):
+    from coper.LogicalAnd import LogicalAnd
+    return LogicalAnd()(self, other)
+
+def logical_or(self, other):
+    from coper.LogicalOr import LogicalOr
+    return LogicalOr()(self, other)
+
+
+class ComputableResult:
+    """
+    任务结果句柄，提供同步 .result() 方法阻塞获取或抛出异常。
+    """
+
+    def __init__(self, exec_id: int):
+        self.exec_id = exec_id
+        self.ctx = get_context()
+
+    def result(self):
+        task_id = self.ctx.task
+        r = self.ctx.redis
+        res_list_name = f"runner-node-result:{task_id}:{self.exec_id}"
+        _, res = r.blpop([res_list_name])
+        r.rpush(res_list_name, res)
+
+        res = json.loads(res)["data"]
+        state = r.hget(f"runner-node:{task_id}", f"state:{self.exec_id}")
+        if state == "FINISHED":
+            return res
+
+        raise Exception(res)
+
+    def __repr__(self):
+        return f"<Result id={self.exec_id}>"
+
+    # 二元运算符
+    def __add__(self, other):
+        from coper.Add import Add
+        return Add()(self, other)
+
+    def __radd__(self, other):
+        from coper.Add import Add
+        return Add()(other, self)
+
+    def __sub__(self, other):
+        from coper.Subtract import Subtract
+        return Subtract()(self, other)
+
+    def __rsub__(self, other):
+        from coper.Subtract import Subtract
+        return Subtract()(other, self)
+
+    def __mul__(self, other):
+        from coper.Multiply import Multiply
+        return Multiply()(self, other)
+
+    def __rmul__(self, other):
+        from coper.Multiply import Multiply
+        return Multiply()(other, self)
+
+    def __truediv__(self, other):
+        from coper.Divide import Divide
+        return Divide()(self, other)
+
+    def __rtruediv__(self, other):
+        from coper.Divide import Divide
+        return Divide()(other, self)
+
+    def __floordiv__(self, other):
+        from coper.FloorDivide import FloorDivide
+        return FloorDivide()(self, other)
+
+    def __rfloordiv__(self, other):
+        from coper.FloorDivide import FloorDivide
+        return FloorDivide()(other, self)
+
+    def __mod__(self, other):
+        from coper.Modulo import Modulo
+        return Modulo()(self, other)
+
+    def __rmod__(self, other):
+        from coper.Modulo import Modulo
+        return Modulo()(other, self)
+
+    def __pow__(self, other):
+        from coper.Power import Power
+        return Power()(self, other)
+
+    def __rpow__(self, other):
+        from coper.Power import Power
+        return Power()(other, self)
+
+    def __and__(self, other):
+        from coper.BitwiseAnd import BitwiseAnd
+        return BitwiseAnd()(self, other)
+
+    def __rand__(self, other):
+        from coper.BitwiseAnd import BitwiseAnd
+        return BitwiseAnd()(other, self)
+
+    def __or__(self, other):
+        from coper.BitwiseOr import BitwiseOr
+        return BitwiseOr()(self, other)
+
+    def __ror__(self, other):
+        from coper.BitwiseOr import BitwiseOr
+        return BitwiseOr()(other, self)
+
+    def __xor__(self, other):
+        from coper.BitwiseXor import BitwiseXor
+        return BitwiseXor()(self, other)
+
+    def __rxor__(self, other):
+        from coper.BitwiseXor import BitwiseXor
+        return BitwiseXor()(other, self)
+
+    def __lshift__(self, other):
+        from coper.LeftShift import LeftShift
+        return LeftShift()(self, other)
+
+    def __rlshift__(self, other):
+        from coper.LeftShift import LeftShift
+        return LeftShift()(other, self)
+
+    def __rshift__(self, other):
+        from coper.RightShift import RightShift
+        return RightShift()(self, other)
+
+    def __rrshift__(self, other):
+        from coper.RightShift import RightShift
+        return RightShift()(other, self)
+
+    def __eq__(self, other):
+        from coper.Equal import Equal
+        return Equal()(self, other)
+
+    def __ne__(self, other):
+        from coper.NotEqual import NotEqual
+        return NotEqual()(self, other)
+
+    def __lt__(self, other):
+        from coper.Less import Less
+        return Less()(self, other)
+
+    def __le__(self, other):
+        from coper.LessEqual import LessEqual
+        return LessEqual()(self, other)
+
+    def __gt__(self, other):
+        from coper.Greater import Greater
+        return Greater()(self, other)
+
+    def __ge__(self, other):
+        from coper.GreaterEqual import GreaterEqual
+        return GreaterEqual()(self, other)
+
+    # 一元运算符
+    def __neg__(self):
+        from coper.Negate import Negate
+        return Negate()(self)
+
+    def __invert__(self):
+        from coper.Invert import Invert
+        return Invert()(self)
+
+    def __bool__(self):
+        raise TypeError("Cannot use ComputableResult in boolean context")
+
+
+# 将逻辑方法绑定到 ComputableResult
+ComputableResult.logical_not = logical_not
+ComputableResult.logical_and = logical_and
+ComputableResult.logical_or = logical_or
