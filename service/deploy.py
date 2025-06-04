@@ -6,6 +6,7 @@ import platform
 import shutil
 import subprocess
 import sys
+
 import yaml
 
 
@@ -56,16 +57,19 @@ def create_conda_env(env_file, env_name):
         error_exit(f"创建环境失败：{e}")
 
 
-def run_init_script(env_name, script_path):
+def run_init_script(env_name, script_base):
+    system_name = platform.system()
+    suffix = ".ps1" if system_name == "Windows" else ".sh"
+    script_path = os.path.join(os.path.dirname(__file__), f"{script_base}{suffix}")
+
     if not os.path.isfile(script_path):
         error_exit(f"初始化脚本未找到：{script_path}")
     print(f"在环境 {env_name} 中执行初始化脚本：{script_path}")
 
-    system_name = platform.system()
     try:
         if system_name == "Windows":
             subprocess.run(
-                ["conda", "run", "-n", env_name, "cmd.exe", "/c", script_path],
+                ["conda", "run", "-n", env_name, "powershell", "-ExecutionPolicy", "Bypass", "-File", script_path],
                 check=True
             )
         else:
@@ -186,8 +190,10 @@ def start_service(service_id: str):
     print(f"在环境 {env_name} 中运行 {service_id}/main.py")
     try:
         subprocess.run(
-            ["conda", "run", "-n", env_name, "python", main_py],
+            ["conda", "run", "-n", env_name, "--no-capture-output", "python", "-u", main_py],
             cwd=service_dir,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
             check=True
         )
     except subprocess.CalledProcessError as e:

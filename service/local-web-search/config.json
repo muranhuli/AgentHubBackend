@@ -5,7 +5,7 @@
   "deploy": {
     "mode": "conda",
     "config_file": "environment.yml",
-    "init_script": "init.sh"
+    "init_script": "init"
   },
   "inputs": {
     "keywords": {

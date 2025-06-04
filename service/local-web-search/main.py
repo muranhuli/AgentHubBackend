@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 import platform
 from pathlib import Path
 from typing import List, Dict
@@ -60,20 +59,20 @@ def get_chrome_user_profiles() -> List[Path]:
             candidates += [
                 Path(local) / "Google" / "Chrome" / "User Data",
                 Path(local) / "Microsoft" / "Edge" / "User Data",
-                ]
+            ]
     elif system == "Darwin":
         home = Path.home()
         candidates += [
             home / "Library" / "Application Support" / "Google" / "Chrome",
             home / "Library" / "Application Support" / "Microsoft Edge",
-            ]
+        ]
     else:
         home = Path.home()
         candidates += [
             home / ".config" / "google-chrome",
             home / ".config" / "chromium",
             home / ".config" / "microsoft-edge",
-            ]
+        ]
 
     profiles: List[Path] = []
     for base in candidates:
@@ -280,7 +279,13 @@ async def search_local(
         return outputs
 
 
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 from core.Service import Service
+from core.Context import Context
+
 
 class LocalWebSearchService(Service):
     """
@@ -289,7 +294,8 @@ class LocalWebSearchService(Service):
     """
 
     def __init__(self):
-        config = json.loads(open("config.json").read())
+        config_path = os.path.join(os.path.dirname(__file__), "config.json")
+        config = json.loads(open(config_path).read())
         super().__init__(config["service_id"])
 
     def initialize(self):
@@ -302,6 +308,6 @@ class LocalWebSearchService(Service):
 
 # 示例调用
 if __name__ == "__main__":
-    service = LocalWebSearchService()
-    service.initialize()
-    service.run()
+    with Context():
+        service = LocalWebSearchService()
+        service.run()

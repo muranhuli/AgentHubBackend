@@ -26,8 +26,6 @@ class Service(Computable):
     服务可以分布式的运行在任意的机器上，通过 RabbitMQ 获取输入数据，在计算完成之后，向指定的队列发送计算结果。
     """
 
-
-
     def __register(self):
         """
         注册服务到中心节点，使用 AuthKey 进行身份验证。
@@ -70,13 +68,12 @@ class Service(Computable):
             self.redis.lpush(return_queue, json.dumps(rv))
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
-
     def run(self):
         self.initialize()
+        queue_name = f"service.request.{self.service_id}"
+        self.ch.queue_declare(queue=queue_name, durable=True)
         self.ch.basic_consume(
-            queue=f"service.request.{self.service_id}", on_message_callback=self._on_message
+            queue=queue_name, on_message_callback=self._on_message
         )
+        print("Service is running and waiting for messages...")
         self.ch.start_consuming()
-
-
-
