@@ -1,5 +1,6 @@
 # AgentHubBackend
-\nThis project uses a new LLM operator for LLM calls. Configure API keys in `.env-llm`.
+
+This project uses a new LLM operator for LLM calls. Configure API keys in `.env-llm`.
 
 The runtime relies on a Minio service for object storage. Set the following variables in `middleware/.env`:
 
@@ -11,3 +12,5 @@ MINIO_ROOT_PASSWORD=<your-secret-key>
 ```
 
 Minio operators are available for writing, reading and deleting objects.
+
+This project uses a new LLM operator for LLM calls. Configure API keys in .env-llm.
