@@ -17,7 +17,6 @@ class Embedding(Computable):
         if os.path.exists(env_path):
             load_dotenv(dotenv_path=env_path)
         self.url = os.getenv('EMBEDDING_URL')
-        print(f"Embedding URL: {self.url}")
         self.api_key = os.getenv('EMBEDDING_API_KEY')
         self.model = os.getenv('EMBEDDING_MODEL')
     
