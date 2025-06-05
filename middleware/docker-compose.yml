@@ -64,3 +64,63 @@ services:
       - ./minio/data:/data
       - /etc/localtime:/etc/localtime:ro
     command: server /data --console-address ":9001"
+
+# ==========================Milvus==========================
+  milvus-etcd:
+    container_name: milvus-etcd
+    image: quay.io/coreos/etcd:v3.5.18
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    volumes:
+      - ./etcd:/etcd
+    command: etcd -advertise-client-urls=http://etcd:${MILVUS_ETCD} -listen-client-urls http://0.0.0.0:${MILVUS_ETCD} --data-dir /etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  milvus-minio:
+    container_name: milvus-minio
+    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+    environment:
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    ports:
+      - "${MILVUS_MINIO_1}:9001"
+      - "${MILVUS_MINIO_2}:9000"
+    volumes:
+      - ./milvus-minio:/minio_data
+    command: minio server /minio_data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  milvus-standalone:
+    container_name: milvus-standalone
+    image: milvusdb/milvus:v2.5.12
+    command: ["milvus", "run", "standalone"]
+    security_opt:
+    - seccomp:unconfined
+    environment:
+      ETCD_ENDPOINTS: milvus-etcd:${MILVUS_ETCD}
+      MINIO_ADDRESS: milvus-minio:${MILVUS_MINIO_2}
+    volumes:
+      - ./milvus:/var/lib/milvus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 30s
+      start_period: 90s
+      timeout: 20s
+      retries: 3
+    ports:
+      - "${MILVUS_STANDALONE_1}:19530"
+      - "${MILVUS_STANDALONE_2}:9091"
+    depends_on:
+      - "milvus-etcd"
+      - "milvus-minio"

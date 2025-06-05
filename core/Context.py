@@ -1,6 +1,6 @@
 import os
 import urllib.parse
-
+from pymilvus import connections
 import redis
 import pika
 import contextvars
@@ -31,6 +31,8 @@ class Context:
         minio_port = os.getenv("MINIO_API_PORT")
         minio_user = os.getenv("MINIO_ROOT_USER")
         minio_pass = os.getenv("MINIO_ROOT_PASSWORD")
+        # Connect to Milvus VectorDB
+        connections.connect(alias="agent_vectorDB", host=os.getenv("HEADER_ADDRESS"), port=os.getenv("MILVUS_STANDALONE_1"))
         self.redis_url = f"redis://:{redis_pass}@{header_address}:{redis_port}/1"
         credentials = pika.PlainCredentials(
             username=rabbitmq_user,
