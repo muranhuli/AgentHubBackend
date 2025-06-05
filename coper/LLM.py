@@ -16,9 +16,8 @@ class LLM(Computable):
     - API密钥：{PROVIDER}_API_KEY
     - 基础URL：{PROVIDER}_BASE_URL
     """
-    
 
-    def __init__(self, model, custom_provider):
+    def __init__(self, model, custom_provider=None):
         super().__init__(model, custom_provider)
         self.model = model
         self.provider = custom_provider
@@ -27,7 +26,7 @@ class LLM(Computable):
         if os.path.exists(env_path):
             load_dotenv(dotenv_path=env_path)
         if custom_provider is not None:
-            self.model=f'openai/{model}'
+            self.model = f'openai/{model}'
             self.api_key = os.getenv(f"{custom_provider.upper()}_API_KEY")
             self.base_url = os.getenv(f"{custom_provider.upper()}_BASE_URL")
         else:
