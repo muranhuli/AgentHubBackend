@@ -16,6 +16,7 @@ class Computable:
         self.ctx = get_context()
         self.redis = self.ctx.redis
         self.ch = self.ctx.channel
+        self.minio = self.ctx.minio
         self.init_args = args
 
     def __call__(self, *args):

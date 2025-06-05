@@ -5,6 +5,7 @@ import redis
 import pika
 import contextvars
 from dotenv import load_dotenv
+from minio import Minio
 
 # Global ContextVar for storing the current execution context
 _current_ctx = contextvars.ContextVar("current_execution_context")
@@ -27,6 +28,9 @@ class Context:
         rabbitmq_port = os.getenv("RABBITMQ_PORT")
         rabbitmq_user = os.getenv("RABBITMQ_USER")
         rabbitmq_pass = os.getenv("RABBITMQ_PASSWORD")
+        minio_port = os.getenv("MINIO_API_PORT")
+        minio_user = os.getenv("MINIO_ROOT_USER")
+        minio_pass = os.getenv("MINIO_ROOT_PASSWORD")
         self.redis_url = f"redis://:{redis_pass}@{header_address}:{redis_port}/1"
         credentials = pika.PlainCredentials(
             username=rabbitmq_user,
@@ -42,9 +46,14 @@ class Context:
         self._redis = None
         self._connection = None
         self._channel = None
+        self._minio = None
         self._token = None
         self.task_id = task_id
         self.init_task = None
+
+        self.minio_endpoint = f"{header_address}:{minio_port}"
+        self.minio_user = minio_user
+        self.minio_pass = minio_pass
 
         init_task_lua_path = os.path.join(os.path.dirname(__file__), "init_task.lua")
         with open(init_task_lua_path, 'r') as _f:
@@ -59,6 +68,13 @@ class Context:
         self._channel = self._connection.channel()
         # Ensure the queue exists and is durable
         self._channel.queue_declare(queue=self.queue, durable=True)
+        # Establish Minio client
+        self._minio = Minio(
+            self.minio_endpoint,
+            access_key=self.minio_user,
+            secret_key=self.minio_pass,
+            secure=False,
+        )
 
         # Set this context as the current one
         self._token = _current_ctx.set(self)
@@ -71,6 +87,7 @@ class Context:
         if self._connection and not self._connection.is_closed:
             self._connection.close()
         # Redis client manages connection pool automatically
+        self._minio = None
 
     @property
     def redis(self) -> redis.Redis:
@@ -89,6 +106,12 @@ class Context:
         if not self._connection:
             raise RuntimeError("RabbitMQ connection is not initialized. Use within an ExecutionContext.")
         return self._connection
+
+    @property
+    def minio(self) -> Minio:
+        if not self._minio:
+            raise RuntimeError("Minio client is not initialized. Use within an ExecutionContext.")
+        return self._minio
 
     @property
     def task(self):
