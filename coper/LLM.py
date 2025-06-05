@@ -16,5 +16,12 @@ class LLM(Computable):
             load_dotenv(dotenv_path=env_path)
 
     def compute(self, prompt: str):
-        response = litellm.completion(model=self.model, messages=[{"role": "user", "content": prompt}], stream=False)
+        if 'openai' in self.model:
+            print("Using OpenAI API")
+            response = litellm.completion(model=self.model, 
+                                          api_key=os.getenv("CUSTOM_API_KEY"),
+                                          api_base=os.getenv("CUSTOM_BASE_URL"),
+                                          messages=[{"role": "user", "content": prompt}], stream=False)
+        else:
+            response = litellm.completion(model=self.model, messages=[{"role": "user", "content": prompt}], stream=False)
         return response["choices"][0]["message"]["content"]
