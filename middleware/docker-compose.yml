@@ -74,14 +74,22 @@ services:
       - ETCD_AUTO_COMPACTION_RETENTION=1000
       - ETCD_QUOTA_BACKEND_BYTES=4294967296
       - ETCD_SNAPSHOT_COUNT=50000
+      - TZ=Asia/Shanghai
+    # Etcd 仅在内网通信，不对外映射端口
     volumes:
-      - ./etcd:/etcd
-    command: etcd -advertise-client-urls=http://etcd:${MILVUS_ETCD} -listen-client-urls http://0.0.0.0:${MILVUS_ETCD} --data-dir /etcd
+      - ./milvus/etcd:/etcd
+    command: >
+      etcd
+      -advertise-client-urls=http://milvus-etcd:2379
+      -listen-client-urls=http://0.0.0.0:2379
+      --data-dir /etcd
     healthcheck:
       test: ["CMD", "etcdctl", "endpoint", "health"]
       interval: 30s
       timeout: 20s
       retries: 3
+    networks:
+      - milvus_internal
 
   milvus-minio:
     container_name: milvus-minio
@@ -89,38 +97,49 @@ services:
     environment:
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
-    ports:
-      - "${MILVUS_MINIO_1}:9001"
-      - "${MILVUS_MINIO_2}:9000"
+      TZ: Asia/Shanghai
+    # Milvus MinIO 仅在内网通信，不对外暴露端口
     volumes:
-      - ./milvus-minio:/minio_data
-    command: minio server /minio_data --console-address ":9001"
+      - ./milvus/minio:/minio_data
+      - /etc/localtime:/etc/localtime:ro
+    command: >
+      minio server /minio_data --console-address ":9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
       timeout: 20s
       retries: 3
+    networks:
+      - milvus_internal
 
   milvus-standalone:
     container_name: milvus-standalone
     image: milvusdb/milvus:v2.5.12
     command: ["milvus", "run", "standalone"]
     security_opt:
-    - seccomp:unconfined
+      - seccomp:unconfined
     environment:
-      ETCD_ENDPOINTS: milvus-etcd:${MILVUS_ETCD}
-      MINIO_ADDRESS: milvus-minio:${MILVUS_MINIO_2}
+      MINIO_REGION: us-east-1
+      ETCD_ENDPOINTS: milvus-etcd:2379
+      MINIO_ADDRESS: milvus-minio:9000
+      TZ: Asia/Shanghai
+    # Standalone 仅暴露 gRPC 和监控端口
+    ports:
+      - "${MILVUS_PORT}:19530"
+      - "${MILVUS_MONITORING_PROT}:9091"
     volumes:
-      - ./milvus:/var/lib/milvus
+      - ./milvus/milvus:/var/lib/milvus
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
       interval: 30s
       start_period: 90s
       timeout: 20s
       retries: 3
-    ports:
-      - "${MILVUS_STANDALONE_1}:19530"
-      - "${MILVUS_STANDALONE_2}:9091"
-    depends_on:
-      - "milvus-etcd"
-      - "milvus-minio"
+    networks:
+      - milvus_internal
+      - default
+
+networks:
+  # Milvus 专用内网：etcd、milvus-minio、milvus-standalone 互通
+  milvus_internal:
+    driver: bridge

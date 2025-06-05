@@ -32,7 +32,11 @@ class Context:
         minio_user = os.getenv("MINIO_ROOT_USER")
         minio_pass = os.getenv("MINIO_ROOT_PASSWORD")
         # Connect to Milvus VectorDB
-        connections.connect(alias="agent_vectorDB", host=os.getenv("HEADER_ADDRESS"), port=os.getenv("MILVUS_STANDALONE_1"))
+        connections.connect(
+            alias="agent_vectorDB",
+            host=os.getenv("HEADER_ADDRESS"),
+            port=os.getenv("MILVUS_PORT")
+        )
         self.redis_url = f"redis://:{redis_pass}@{header_address}:{redis_port}/1"
         credentials = pika.PlainCredentials(
             username=rabbitmq_user,
