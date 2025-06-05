@@ -56,7 +56,7 @@ class VectorDBOperations:
         collection.flush()
         ids = insert_result.primary_keys
         print(f"[INFO] 插入 {len(vectors)} 条记录，ID 范围：{ids[0]} ~ {ids[-1]}，分区：{partition_name}")
-        return ids
+        return list(ids)
 
     def search_vector(self, collection_name: str, query_vector: list, top_k: int = 3, partition_name: str = "_default", expr: Optional[str] = None):
         collection = Collection(name=collection_name, using="agent_vectorDB")
@@ -85,14 +85,15 @@ class VectorDBOperations:
 
 class VectorDB(Computable):
     def __init__(self):
+        super().__init__()
         self.vector_db = VectorDBOperations()
 
-    def compute(self, *args, **kwargs):
+    def compute(self, function_name, **kwargs):
         """
         统一计算入口，通过第一个参数指定操作类型，自动路由到对应的向量数据库操作
         
         Args:
-            args[0] (str): 操作类型
+            function_name (str): 操作类型
             **kwargs: 各操作所需的参数
         """
         # 操作路由字典
@@ -105,18 +106,16 @@ class VectorDB(Computable):
             "delete_vector": self.vector_db.delete_vector
         }
         
-        if not args:
+        if not function_name:
             raise ValueError("必须提供操作类型作为第一个参数")
-        
-        operation = args[0]
-        
-        if operation not in operation_map:
+
+        if function_name not in operation_map:
             supported_ops = list(operation_map.keys())
-            raise ValueError(f"不支持的操作 '{operation}'。支持的操作: {supported_ops}")
-        
+            raise ValueError(f"不支持的操作 '{function_name}'。支持的操作: {supported_ops}")
+
         try:
             # 调用对应的方法
-            return operation_map[operation](**kwargs)
+            return operation_map[function_name](**kwargs)
         except Exception as e:
-            print(f"[ERROR] 操作 '{operation}' 执行失败: {str(e)}")
+            print(f"[ERROR] 操作 '{function_name}' 执行失败: {str(e)}")
             raise
