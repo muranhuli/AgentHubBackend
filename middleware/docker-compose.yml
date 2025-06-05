@@ -126,7 +126,7 @@ services:
     # Standalone 仅暴露 gRPC 和监控端口
     ports:
       - "${MILVUS_PORT}:19530"
-      - "${MILVUS_MONITORING_PROT}:9091"
+      - "${MILVUS_MONITORING_PORT}:9091"
     volumes:
       - ./milvus/milvus:/var/lib/milvus
     healthcheck:
