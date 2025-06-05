@@ -8,18 +8,19 @@ from core.Context import get_context
 
 class Computable:
     """
-    算子基类：实现 compute(self, *args) 即可。
+    算子基类：实现 ``compute(self, *args, **kwargs)`` 即可。
     调用时自动使用当前 Runner，上下文管理无需 await。
     """
 
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         self.ctx = get_context()
         self.redis = self.ctx.redis
         self.ch = self.ctx.channel
         self.minio = self.ctx.minio
         self.init_args = args
+        self.init_kwargs = kwargs
 
-    def __call__(self, *args):
+    def __call__(self, *args, **kwargs):
         task_id = self.ctx.task
         task_key = f"runner-node:{task_id}"
         task_waiter_key = f"runner-node-waiters:{task_id}"
@@ -36,12 +37,22 @@ class Computable:
             else:
                 arg_list.append({"is_ref": False, "value": arg})
 
+        kwarg_dict = {}
+        for k, v in kwargs.items():
+            if isinstance(v, ComputableResult):
+                kwarg_dict[k] = {"is_ref": True, "exec_id": v.exec_id}
+                dep_list.append(v.exec_id)
+            else:
+                kwarg_dict[k] = {"is_ref": False, "value": v}
+
         job = {
             "exec_id": exec_id,
             "task_id": task_id,
             "task": self.__class__.__name__,
             "args": arg_list,
+            "kwargs": kwarg_dict,
             "init_args": self.init_args,
+            "init_kwargs": self.init_kwargs,
         }
 
         dep = ",".join(str(dep) for dep in dep_list)
@@ -60,5 +71,5 @@ class Computable:
 
         return ComputableResult(exec_id)
 
-    def compute(self, *args):
+    def compute(self, *args, **kwargs):
         raise NotImplementedError("compute must return a value or raise")

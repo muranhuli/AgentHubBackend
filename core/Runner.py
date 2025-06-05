@@ -62,13 +62,24 @@ class Runner:
                     args.append(json.loads(raw)["data"])
                 else:
                     args.append(arg["value"])
+            kwargs = {}
+            for k, v in job.get("kwargs", {}).items():
+                if v["is_ref"]:
+                    kw_key = f"runner-node-result:{task_id}:{v['exec_id']}"
+                    raw = self.redis.lrange(kw_key, 0, -1)[0]
+                    kwargs[k] = json.loads(raw)["data"]
+                else:
+                    kwargs[k] = v["value"]
+
             # 动态加载 operator 并执行
             module = importlib.import_module(f"coper.{job['task']}")
             cls = getattr(module, job["task"])
-            if "init_args" in job:
-                res = cls(*job["init_args"]).compute(*args)
-            else:
-                res = cls().compute(*args)
+            init_args = job.get("init_args", [])
+            init_kwargs = job.get("init_kwargs", {})
+            instance = cls(*init_args, **init_kwargs)
+            compute = instance.compute
+
+            res = compute(*args, **kwargs)
         except Exception as e:
             self.redis.hset(task_key, f"state:{exec_id}", "ERROR")
             self.redis.lpush(result_key, json.dumps({"data": str(e)}))
