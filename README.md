@@ -1,6 +1,20 @@
 # AgentHubBackend
 
-This project uses a new LLM operator for LLM calls. Configure API keys in `.env-llm`.
+## Configuration
+
+### Environment Files Setup
+
+1. Copy the template files and configure your parameters:
+
+```bash
+# Copy environment templates
+cp .env-template .env
+cp .env-llm-template .env-llm
+```
+
+2. Fill in your own parameters in the copied files.
+
+### Minio Configuration
 
 The runtime relies on a Minio service for object storage. Set the following variables in `middleware/.env`:
 
@@ -11,6 +25,8 @@ MINIO_ROOT_USER=<your-access-key>
 MINIO_ROOT_PASSWORD=<your-secret-key>
 ```
 
-Minio operators are available for writing, reading and deleting objects.
+### LLM Configuration
 
-This project uses a new LLM operator for LLM calls. Configure API keys in .env-llm.
+Configure your LLM API keys in `.env-llm` file after copying from the template.
+
+Minio operators are available for writing, reading and deleting objects.
