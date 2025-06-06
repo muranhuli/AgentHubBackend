@@ -13,7 +13,7 @@ class Embedding(Computable):
     def __init__(self):
         super().__init__()
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        env_path = os.path.join(base_dir, '.env-llm')
+        env_path = os.path.join(base_dir, '.env')
         if os.path.exists(env_path):
             load_dotenv(dotenv_path=env_path)
         self.url = os.getenv('EMBEDDING_URL')

@@ -2,6 +2,16 @@ from core.Computable import Computable
 from dotenv import load_dotenv
 import os
 import litellm
+import instructor
+from typing import Optional
+from pydantic import BaseModel, Field
+from typing import Union
+
+class LLMResponse(BaseModel):
+    """LLM回复的数据类"""
+    content: Optional[str] = Field(default="", description="主要回复内容")
+    reasoning_content: Optional[str] = Field(default="", description="推理过程内容")
+    structured_output: Optional[Union[dict, BaseModel]] = Field(default=None, description="结构化输出")
 
 
 class LLM(Computable):
@@ -22,7 +32,7 @@ class LLM(Computable):
         self.model = model
         self.provider = custom_provider
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        env_path = os.path.join(base_dir, '.env-llm')
+        env_path = os.path.join(base_dir, '.env')
         if os.path.exists(env_path):
             load_dotenv(dotenv_path=env_path)
         if custom_provider is not None:
@@ -33,13 +43,16 @@ class LLM(Computable):
             self.api_key = None
             self.base_url = None
 
-    def compute(self, prompt: str):
-        if self.provider is not None:
-            response = litellm.completion(model=self.model,
-                                          api_key=self.api_key,
-                                          api_base=self.base_url,
-                                          messages=[{"role": "user", "content": prompt}], stream=False)
-        else:
-            response = litellm.completion(model=self.model,
-                                          messages=[{"role": "user", "content": prompt}], stream=False)
-        return response["choices"][0]["message"]["content"]
+    def compute(self, prompt: str, structured_output=None) -> LLMResponse:
+        client = instructor.from_litellm(litellm.completion)
+        response = client.chat.completions.create(model=self.model,
+                                        api_key=self.api_key,
+                                        api_base=self.base_url,
+                                        response_model=structured_output,
+                                        messages=[{"role": "user", "content": prompt}], stream=False)
+        llmResponse = LLMResponse(
+            content=response["choices"][0]["message"].get("content", "") if structured_output is None else None,
+            reasoning_content=response["choices"][0]["message"].get("reasoning_content", "") if structured_output is None else None,
+            structured_output=response if structured_output is not None else None
+        )
+        return llmResponse
