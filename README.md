@@ -1,5 +1,7 @@
 # AgentHubBackend
 
+For details on how to use these, please see [how_to_use.md](./how_to_use.md).
+
 ## Configuration
 
 ### Environment Files Setup
