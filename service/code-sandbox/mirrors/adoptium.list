@@ -1,0 +1,5 @@
+# ----------------------------------------------------------------------------
+# USTC Adoptium (Temurin) 镜像源（跳过签名校验）
+# 仅适用于 Ubuntu 22.04 (jammy)
+# ----------------------------------------------------------------------------
+deb [signed-by=/etc/apt/keyrings/adoptium.asc] https://mirrors.ustc.edu.cn/adoptium/deb jammy main
