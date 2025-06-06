@@ -3,7 +3,34 @@ from dotenv import load_dotenv
 import os
 import litellm
 from typing import Optional, Union, Type
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, create_model
+
+type_mapping = {
+    'string': str,
+    'integer': int,
+    'number': float,
+    'boolean': bool,
+    'object': dict,
+    'array': list
+}
+
+
+def restore_model_from_schema(schema: dict) -> type[BaseModel]:
+    '''
+        根据JSON Schema恢复Pydantic模型
+    '''
+    props = schema.get("properties", {})
+    required = set(schema.get("required", []))
+    fields = {}
+
+    for name, prop in props.items():
+        ptype = type_mapping.get(prop.get("type"), str)  # 默认str
+        description = prop.get("description", "")
+        default = ... if name in required else None  # 必填用 Ellipsis
+        fields[name] = (ptype, Field(default, description=description))
+
+    model_name = schema.get("title", "DynamicModel")
+    return create_model(model_name, **fields)
 
 
 class LLMResponse(BaseModel):
@@ -53,7 +80,7 @@ class LLM(Computable):
         if os.path.exists(env_path):
             load_dotenv(dotenv_path=env_path)
 
-    def compute(self, prompt: str, structured_output: Optional[Type[BaseModel]] = None) -> dict:
+    def compute(self, prompt: str, structured_output: Optional[dict] = None) -> dict:
         """
         调用LLM并返回结果。
 
@@ -61,31 +88,35 @@ class LLM(Computable):
         :param structured_output: 若需要结构化输出，传入Pydantic模型类
         :return: 返回标准结构的LLMResponse字典
         """
+        # 若提供了结构化JSON Schema，则将其转换为Pydantic模型
+        structured_model: Optional[Type[BaseModel]] = None
+        if structured_output:
+            structured_model = restore_model_from_schema(structured_output)
 
-        # 调用litellm接口（建议补充异常处理）
+        # 调用litellm接口
         response = litellm.completion(
             model=self.model,
             api_key=self.api_key,
             api_base=self.base_url,
-            response_format=structured_output,
+            response_format=structured_model,
             messages=[{"role": "user", "content": prompt}],
             stream=False
         )
-
+        print(f"LLM response: {response}")
         message = response['choices'][0]['message']
         content = message.get("content", "")
         reasoning = message.get("reasoning_content", "")
 
-        # 若启用结构化输出，则将内容反序列化为模型实例
+        # 若启用结构化输出，则将内容反序列化为模型实例，需针对VLLM进行判断下，VLLM结构化结果在reasoning_content中
         structured = (
-            structured_output.model_validate_json(content).model_dump()
-            if structured_output else None
+            structured_model.model_validate_json(content if content else reasoning).model_dump()
+            if structured_model else None
         )
 
         # 构造统一响应对象
         llm_response = LLMResponse(
-            content=content if not structured_output else None,
-            reasoning_content=reasoning if not structured_output else None,
+            content=content if not structured_model else None,
+            reasoning_content=reasoning if not structured_model else None,
             structured_output=structured
         )
 
