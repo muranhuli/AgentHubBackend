@@ -2,57 +2,91 @@ from core.Computable import Computable
 from dotenv import load_dotenv
 import os
 import litellm
-import instructor
-from typing import Optional
+from typing import Optional, Union, Type
 from pydantic import BaseModel, Field
-from typing import Union
+
 
 class LLMResponse(BaseModel):
-    """LLM回复的数据类"""
+    """LLM回复的结构体"""
     content: Optional[str] = Field(default="", description="主要回复内容")
     reasoning_content: Optional[str] = Field(default="", description="推理过程内容")
     structured_output: Optional[Union[dict, BaseModel]] = Field(default=None, description="结构化输出")
 
 
 class LLM(Computable):
-    """Call large language models via the LiteLLM library.
-    配置逻辑：
-    - 若provider为空，则使用litellm配置好的官方信息（使用默认配置）
-    - 若provider不为空，则会将provider加入_API_KEY和_BASE_URL前缀去环境变量中寻找
-      例如：provider=SDU时，会查找SDU_API_KEY和SDU_BASE_URL环境变量
-    - 当使用自定义provider时，模型名会自动加上"openai/"前缀以使用litellm的openai兼容模式
-    
-    环境变量格式：
+    """
+    基于LiteLLM封装的LLM调用类。
+
+    配置逻辑说明：
+    - 若custom_provider为空，使用默认配置。
+    - 若custom_provider非空：
+        - 模型名自动加前缀 "openai/"，启用openai兼容模式；
+        - 自动从环境变量中读取{PROVIDER}_API_KEY和{PROVIDER}_BASE_URL。
+
+    环境变量格式要求：
     - API密钥：{PROVIDER}_API_KEY
     - 基础URL：{PROVIDER}_BASE_URL
     """
 
-    def __init__(self, model, custom_provider=None):
+    def __init__(self, model: str, custom_provider: Optional[str] = None):
         super().__init__(model, custom_provider)
         self.model = model
         self.provider = custom_provider
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        env_path = os.path.join(base_dir, '.env')
-        if os.path.exists(env_path):
-            load_dotenv(dotenv_path=env_path)
-        if custom_provider is not None:
-            self.model = f'openai/{model}'
-            self.api_key = os.getenv(f"{custom_provider.upper()}_API_KEY")
-            self.base_url = os.getenv(f"{custom_provider.upper()}_BASE_URL")
+
+        # 加载环境变量
+        self._load_env()
+
+        # 配置自定义Provider参数
+        if self.provider:
+            self.model = f"openai/{model}"
+            provider_upper = self.provider.upper()
+            self.api_key = os.getenv(f"{provider_upper}_API_KEY")
+            self.base_url = os.getenv(f"{provider_upper}_BASE_URL")
         else:
             self.api_key = None
             self.base_url = None
 
-    def compute(self, prompt: str, structured_output=None) -> LLMResponse:
-        client = instructor.from_litellm(litellm.completion)
-        response = client.chat.completions.create(model=self.model,
-                                        api_key=self.api_key,
-                                        api_base=self.base_url,
-                                        response_model=structured_output,
-                                        messages=[{"role": "user", "content": prompt}], stream=False)
-        llmResponse = LLMResponse(
-            content=response["choices"][0]["message"].get("content", "") if structured_output is None else None,
-            reasoning_content=response["choices"][0]["message"].get("reasoning_content", "") if structured_output is None else None,
-            structured_output=response if structured_output is not None else None
+    def _load_env(self):
+        """加载项目根目录下的.env文件"""
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        env_path = os.path.join(base_dir, '.env')
+        if os.path.exists(env_path):
+            load_dotenv(dotenv_path=env_path)
+
+    def compute(self, prompt: str, structured_output: Optional[Type[BaseModel]] = None) -> dict:
+        """
+        调用LLM并返回结果。
+
+        :param prompt: 用户输入的提示词
+        :param structured_output: 若需要结构化输出，传入Pydantic模型类
+        :return: 返回标准结构的LLMResponse字典
+        """
+
+        # 调用litellm接口（建议补充异常处理）
+        response = litellm.completion(
+            model=self.model,
+            api_key=self.api_key,
+            api_base=self.base_url,
+            response_format=structured_output,
+            messages=[{"role": "user", "content": prompt}],
+            stream=False
         )
-        return llmResponse
+
+        message = response['choices'][0]['message']
+        content = message.get("content", "")
+        reasoning = message.get("reasoning_content", "")
+
+        # 若启用结构化输出，则将内容反序列化为模型实例
+        structured = (
+            structured_output.model_validate_json(content).model_dump()
+            if structured_output else None
+        )
+
+        # 构造统一响应对象
+        llm_response = LLMResponse(
+            content=content if not structured_output else None,
+            reasoning_content=reasoning if not structured_output else None,
+            structured_output=structured
+        )
+
+        return llm_response.model_dump()

@@ -5,4 +5,3 @@ pyyaml==6.0.2
 litellm==1.72.0
 minio==7.2.5
 pymilvus==2.5.10
-instructor==1.8.3
