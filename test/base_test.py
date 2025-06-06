@@ -1,5 +1,4 @@
 import uuid
-from typing import Any
 
 from coper.LLM import LLM
 from coper.Mul import Mul
@@ -14,11 +13,13 @@ if __name__ == '__main__':
         search = Service("local-web-search")
         llm_lite = LLM("volcengine/doubao-1-5-lite-32k-250115")
         llm_pro = LLM("volcengine/doubao-1-5-pro-32k-250115")
+        llm_dsr1 = LLM("volcengine/deepseek-r1-250528")
 
-        query = "python 如何实现多线程"
 
-        keywords = llm_pro(f"""用户的问题是：{query}
-请给出 3-5 组相关的搜索关键词，从而全面准确的回答用户的问题。可以尝试使用不同语言或不同的表达方式来描述同一内容。
+        query = "有哪些开源的可以运行限定时间内存执行各种语言代码的沙箱？"
+
+        keywords = llm_pro(f"""用户的查询是：{query}
+请给出 3-5 组相关的搜索关键词，从而全面准确的回答用户的问题。可以尝试使用不同语言或不同的角度检索。
 多组关键词通过|分割，关键词中不能含有 |，可以含有逗号或空格等其余内容。请不要给出任何其他内容。
 输出格式距离：xxx xxx|yy yyyy|zzzzz。
 """).result()
@@ -26,7 +27,7 @@ if __name__ == '__main__':
         print("关键词：", keywords)
         web_res = []
         for i in range(len(keywords)):
-            web_res.append(search(keywords[i].strip(), "bing", 5))
+            web_res.append(search(keywords[i].strip(), "google", 2))
 
         simple = []
         res = []
@@ -42,9 +43,19 @@ if __name__ == '__main__':
         for i in range(len(simple)):
             res[i]["content"] = simple[i].result()
 
+        final_str = ""
+
         for i in range(len(res)):
-            print(f"第{i + 1}个结果：")
-            print("title:", res[i]["title"])
-            print("url:", res[i]["url"])
-            print("content:", res[i]["content"])
-            print()
+            final_str += (f"第{i + 1}个结果：\n"
+                          f"title: {res[i]['title']}\n"
+                          f"url: {res[i]['url']}\n"
+                          f"content: {res[i]['content']}\n\n")
+        final = llm_dsr1(f"""用户的查询是：{query}
+搜索结果：{final_str}
+请根据搜索结果，请尽可能的全面准确的回答用户的问题。
+""").result()
+        print(final)
+
+
+
+

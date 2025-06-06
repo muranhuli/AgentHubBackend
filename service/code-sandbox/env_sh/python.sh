@@ -16,7 +16,6 @@ fi
 PYTHON_VERSION="$1"
 ENV_PREFIX="/opt/python/$PYTHON_VERSION"
 CONDA_BIN="/opt/conda/bin/conda"
-REQ_FILE="/opt/requirements.txt"
 
 # 确保 conda 在 PATH
 export PATH="/opt/conda/bin:$PATH"
@@ -58,13 +57,6 @@ python -m pip install \
   python-dotenv \
   celery \
   redis
-
-# 3) 安装项目根目录的 requirements.txt
-if [ -f "$REQ_FILE" ]; then
-  python -m pip install -r "$REQ_FILE"
-else
-  echo "警告: 未找到 ${REQ_FILE}，跳过项目依赖安装。"
-fi
 
 # 4) 清理 conda 缓存
 "$CONDA_BIN" clean -ay -q

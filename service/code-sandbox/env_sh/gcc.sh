@@ -24,8 +24,8 @@ BUILD_ARCH="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)"
 
 # 检查镜像配置文件
 MIRROR_BASE="https://ftp.gnu.org"
-if [ -f "/tmp/gcc.txt" ]; then
-  MIRROR_BASE=$(head -n 1 /tmp/gcc.txt | tr -d '\n')
+if [ -f "/opt/gcc.txt" ]; then
+  MIRROR_BASE=$(head -n 1 /opt/gcc.txt | tr -d '\n')
   echo "使用镜像源: $MIRROR_BASE"
 fi
 
