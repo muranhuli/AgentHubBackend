@@ -5,6 +5,20 @@ from pymilvus import (
 )
 from typing import Optional
 from core.Computable import Computable
+from pydantic import BaseModel, Field
+
+
+class VectorDBInput(BaseModel):
+    """Input model for :class:`VectorDB`."""
+
+    function_name: str = Field(..., description="Operation type")
+    kwargs: dict = Field(default_factory=dict, description="Arguments for the operation")
+
+
+class VectorDBOutput(BaseModel):
+    """Output model for :class:`VectorDB`."""
+
+    result: object = Field(..., description="Operation result")
 
 
 class VectorDBOperations:
@@ -84,17 +98,25 @@ class VectorDBOperations:
         
 
 class VectorDB(Computable):
+    """Perform operations on Milvus vector database."""
+
+    input_schema = VectorDBInput
+    output_schema = VectorDBOutput
+    description = "Vector database utilities"
+
     def __init__(self):
         super().__init__()
         self.vector_db = VectorDBOperations()
 
-    def compute(self, function_name, **kwargs):
-        """
-        统一计算入口，通过第一个参数指定操作类型，自动路由到对应的向量数据库操作
-        
+    def compute(self, function_name: str, **kwargs) -> object:
+        """Dispatch to the underlying vector database operations.
+
         Args:
-            function_name (str): 操作类型
-            **kwargs: 各操作所需的参数
+            function_name: Name of the operation.
+            **kwargs: Parameters for that operation.
+
+        Returns:
+            The result returned by the operation.
         """
         # 操作路由字典
         operation_map = {

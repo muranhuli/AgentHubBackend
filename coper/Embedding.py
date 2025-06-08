@@ -3,12 +3,29 @@ import requests
 from core.Computable import Computable
 from typing import Union, List
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field
+
+
+class EmbeddingInput(BaseModel):
+    """Input model for :class:`Embedding`."""
+
+    text: Union[str, List[str]] = Field(..., description="Text or list of texts to embed")
+
+
+class EmbeddingOutput(BaseModel):
+    """Output model for :class:`Embedding`."""
+
+    vectors: Union[List[float], List[List[float]], None] = Field(
+        ..., description="Embedding result or ``None`` if failed"
+    )
 
 
 class Embedding(Computable):
-    """
-    使用embedding计算文本的嵌入向量。
-    """
+    """Generate embeddings for text."""
+
+    input_schema = EmbeddingInput
+    output_schema = EmbeddingOutput
+    description = "Compute text embeddings"
 
     def __init__(self):
         super().__init__()
@@ -20,18 +37,14 @@ class Embedding(Computable):
         self.api_key = os.getenv('EMBEDDING_API_KEY')
         self.model = os.getenv('EMBEDDING_MODEL')
     
-    def compute(self, text: Union[str, List[str]], **kwargs):
-        """
-        计算文本的嵌入向量
-        
+    def compute(self, text: Union[str, List[str]], **kwargs) -> Union[List[float], List[List[float]], None]:
+        """Return embedding vectors for the given text.
+
         Args:
-            text (Union[str, List[str]]): 输入文本，可以是单个字符串或字符串列表
-            
+            text: Input text or list of texts.
+
         Returns:
-            Union[List[float], List[List[float]], None]: 
-            - 单个文本: 返回嵌入向量列表
-            - 多个文本: 返回嵌入向量列表的列表
-            - 失败时返回 None
+            A list of float vectors or ``None`` if the request fails.
         """
         
         headers = {
