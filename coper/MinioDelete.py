@@ -24,6 +24,9 @@ class MinioDelete(Computable):
 
     def compute(self, bucket: str, object_name: str) -> bool:
         """Delete an object from Minio and return ``True`` when done."""
-
-        self.minio.remove_object(bucket, object_name)
-        return True
+        try:
+            self.minio.remove_object(bucket, object_name)
+        except Exception as e:
+            raise Exception(f"Error deleting object {object_name} from bucket {bucket}: {e}")
+        else:
+            return True
