@@ -7,10 +7,21 @@ from core.Context import get_context
 
 
 class Computable:
+    """算子基类。
+
+    Subclasses should implement :meth:`compute` and provide ``input_schema``,
+    ``output_schema`` and ``description`` to describe the operator. These can be
+    defined as class attributes.
     """
-    算子基类：实现 ``compute(self, *args, **kwargs)`` 即可。
-    调用时自动使用当前 Runner，上下文管理无需 await。
-    """
+
+    #: Pydantic model describing the expected inputs of this computable.
+    input_schema = None
+
+    #: Pydantic model describing the outputs of this computable.
+    output_schema = None
+
+    #: Human readable description of the computable's capability.
+    description = ""
 
     def __init__(self, *args, **kwargs):
         self.ctx = get_context()
@@ -19,6 +30,10 @@ class Computable:
         self.minio = self.ctx.minio
         self.init_args = args
         self.init_kwargs = kwargs
+        # Copy class level descriptions so each instance carries them
+        self.description = getattr(self.__class__, 'description', '')
+        self.input_schema = getattr(self.__class__, 'input_schema', None)
+        self.output_schema = getattr(self.__class__, 'output_schema', None)
 
     def __call__(self, *args, **kwargs):
         task_id = self.ctx.task

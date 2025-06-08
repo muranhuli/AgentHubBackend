@@ -33,6 +33,16 @@ def restore_model_from_schema(schema: dict) -> type[BaseModel]:
     return create_model(model_name, **fields)
 
 
+class LLMInput(BaseModel):
+    """Input model for :class:`LLM`."""
+
+    prompt: str = Field(..., description="Prompt text for the LLM")
+    structured_output: Optional[dict] = Field(
+        default=None,
+        description="Optional JSON schema for structured output",
+    )
+
+
 class LLMResponse(BaseModel):
     """LLM回复的结构体"""
     content: Optional[str] = Field(default="", description="主要回复内容")
@@ -40,7 +50,18 @@ class LLMResponse(BaseModel):
     structured_output: Optional[Union[dict, BaseModel]] = Field(default=None, description="结构化输出")
 
 
+# Alias for output description
+class LLMOutput(LLMResponse):
+    """Output model for :class:`LLM`."""
+
+
 class LLM(Computable):
+    """LLM operator based on LiteLLM."""
+
+    input_schema = LLMInput
+    output_schema = LLMOutput
+    description = "Invoke an LLM model"
+
     """
     基于LiteLLM封装的LLM调用类。
 
@@ -81,12 +102,14 @@ class LLM(Computable):
             load_dotenv(dotenv_path=env_path)
 
     def compute(self, prompt: str, structured_output: Optional[dict] = None) -> dict:
-        """
-        调用LLM并返回结果。
+        """Invoke the LLM and return the response.
 
-        :param prompt: 用户输入的提示词
-        :param structured_output: 若需要结构化输出，传入Pydantic模型类
-        :return: 返回标准结构的LLMResponse字典
+        Args:
+            prompt: Text prompt sent to the model.
+            structured_output: Optional JSON schema describing structured output.
+
+        Returns:
+            A dictionary representation of :class:`LLMResponse`.
         """
         # 若提供了结构化JSON Schema，则将其转换为Pydantic模型
         structured_model: Optional[Type[BaseModel]] = None
