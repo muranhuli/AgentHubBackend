@@ -226,4 +226,31 @@ if __name__ == "__main__": # This is typically how you'd run a script.
 
 ```
 
+## 4. TTS - Text-to-Speech
+
+The `TTS` component converts text to speech using the MiniMax TTS API, allowing you to generate high-quality audio files from text input.
+
+We use minmax's services(https://www.minimaxi.com)
+
+### Environment Configuration
+
+Add the following to your `.env` file:
+
+```env
+MINIMAX_GROUP_ID=your-minimax-group-id
+MINIMAX_API_KEY=your-minimax-api-key
+```
+
+### Output Format
+
+The TTS component returns a dictionary with the following structure:
+
+```python
+{
+    'success': bool,      # Whether the operation succeeded
+    'filename': str,      # Absolute path to the saved audio file
+    'message': str        # Success message or error description
+}
+```
+
 This section covers the fundamental operations for the `VectorDB` component. Ensure your vector database (e.g., Milvus) is running and accessible.
