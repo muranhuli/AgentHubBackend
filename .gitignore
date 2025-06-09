@@ -2,6 +2,7 @@
 .env-llm
 .idea/
 *.pyc
+*.mp3
 node_modules
 middleware/mysql
 middleware/rabbitmq
