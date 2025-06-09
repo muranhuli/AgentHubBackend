@@ -1,10 +1,12 @@
 from core.Computable import Computable
 from dotenv import load_dotenv
 import os
+import base64
 import litellm
 from typing import Optional, Union, Type
 from pydantic import BaseModel, Field, create_model
 
+# 定义JSON Schema类型到Python类型的映射
 type_mapping = {
     'string': str,
     'integer': int,
@@ -13,6 +15,21 @@ type_mapping = {
     'object': dict,
     'array': list
 }
+
+# 根据文件扩展名确定MIME类型
+
+
+def get_image_mime_type(file_path):
+    ext = os.path.splitext(file_path)[1].lower()
+    mime_types = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.bmp': 'image/bmp'
+    }
+    return mime_types.get(ext, 'image/jpeg')  # 默认为jpeg
 
 
 def restore_model_from_schema(schema: dict) -> type[BaseModel]:
@@ -101,7 +118,72 @@ class LLM(Computable):
         if os.path.exists(env_path):
             load_dotenv(dotenv_path=env_path)
 
-    def compute(self, prompt: str, structured_output: Optional[dict] = None) -> dict:
+    def language_llm(self, prompt, structured_model: Optional[type[BaseModel]] = None):
+        """Invoke the LLM for language tasks.
+
+        Args:
+            prompt: Text prompt sent to the model.
+            structured_output: Optional JSON schema describing structured output.
+
+        Returns:
+            A dictionary representation of :class:`LLMResponse`.
+        """
+        # 调用litellm接口
+        response = litellm.completion(
+            model=self.model,
+            api_key=self.api_key,
+            api_base=self.base_url,
+            response_format=structured_model,
+            messages=[
+                {
+                    "role": "user", 
+                    "content": prompt
+                }
+            ],
+            stream=False
+        )
+        return response
+
+    def vision_llm(self, prompt: str, image_path: str, structured_model: Optional[type[BaseModel]] = None):
+        """Invoke the LLM for vision tasks.
+
+        Args:
+            prompt: Text prompt sent to the model.
+            image_path: Path to the image file.
+
+        Returns:
+            A dictionary representation of :class:`LLMResponse`.
+        """
+        # 检查图片url是否存在，不存在则抛出异常
+        if not os.path.exists(image_path):
+            raise FileNotFoundError(f"Image file not found: {image_path}")
+        # 读取图片文件并转成base64编码
+        with open(image_path, "rb") as image_file:
+            image_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+            # 根据文件类型添加正确的data URL前缀
+            mime_type = get_image_mime_type(image_path)
+            image_base64 = f"data:{mime_type};base64,{image_base64}"
+
+        # 调用litellm接口
+        response = litellm.completion(
+            model=self.model,
+            api_key=self.api_key,
+            api_base=self.base_url,
+            response_format=structured_model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image_url", "image_url": {"url": image_base64}},
+                        {"type": "text", "text": prompt}
+                    ]
+                }
+            ],
+            stream=False
+        )
+        return response
+
+    def compute(self, prompt: str, image_path: Optional[str] = None, structured_output: Optional[dict] = None) -> dict:
         """Invoke the LLM and return the response.
 
         Args:
@@ -116,20 +198,14 @@ class LLM(Computable):
         if structured_output:
             structured_model = restore_model_from_schema(structured_output)
 
-        # 调用litellm接口
-        response = litellm.completion(
-            model=self.model,
-            api_key=self.api_key,
-            api_base=self.base_url,
-            response_format=structured_model,
-            messages=[{"role": "user", "content": prompt}],
-            stream=False
-        )
-        print(f"LLM response: {response}")
-        message = response['choices'][0]['message']
+        if image_path is None:
+            llm_response = self.language_llm(prompt, structured_model)
+        else:
+            llm_response = self.vision_llm(prompt, image_path, structured_model)
+
+        message = llm_response['choices'][0]['message']
         content = message.get("content", "")
         reasoning = message.get("reasoning_content", "")
-
         # 若启用结构化输出，则将内容反序列化为模型实例，需针对VLLM进行判断下，VLLM结构化结果在reasoning_content中
         structured = (
             structured_model.model_validate_json(content if content else reasoning).model_dump()
