@@ -51,25 +51,31 @@ def restore_model_from_schema(schema: dict) -> type[BaseModel]:
 
 
 class LLMInput(BaseModel):
-    """Input model for :class:`LLM`."""
-
-    prompt: str = Field(..., description="Prompt text for the LLM")
+    """Input model for LLM operations.
+    
+    This class defines the structure for inputs to the LLM operator, supporting
+    both text-only and multimodal (text + image) interactions with optional
+    structured output formatting.
+    """
+    prompt: str = Field(
+        ..., 
+        description="The text prompt to send to the LLM model. This is the main instruction or query."
+    )
+    image_path: Optional[str] = Field(
+        default=None,
+        description="Optional path to an image file for vision tasks. When provided, enables multimodal processing."
+    )
     structured_output: Optional[dict] = Field(
         default=None,
-        description="Optional JSON schema for structured output",
+        description="Optional JSON schema for structured output. When provided, the LLM will format its response according to this schema."
     )
 
 
-class LLMResponse(BaseModel):
+class LLMOutput(BaseModel):
     """LLM回复的结构体"""
     content: Optional[str] = Field(default="", description="主要回复内容")
     reasoning_content: Optional[str] = Field(default="", description="推理过程内容")
     structured_output: Optional[Union[dict, BaseModel]] = Field(default=None, description="结构化输出")
-
-
-# Alias for output description
-class LLMOutput(LLMResponse):
-    """Output model for :class:`LLM`."""
 
 
 class LLM(Computable):
@@ -222,7 +228,7 @@ class LLM(Computable):
         )
 
         # 构造统一响应对象
-        llm_response = LLMResponse(
+        llm_response = LLMOutput(
             content=content if not structured_model else None,
             reasoning_content=reasoning if not structured_model else None,
             structured_output=structured

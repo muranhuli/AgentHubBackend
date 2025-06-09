@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
         # 语言大模型测试
         prompt = "写一个Python函数，计算两个数的和，并返回结果。请用中文回答。"
-        response1 = llm_language(prompt, structured_output=CodeAnswer.model_json_schema()).result()
+        response1 = llm_vision(prompt, structured_output=CodeAnswer.model_json_schema()).result()
         print(f"Prompt: {prompt}\ntype: {type(response1)}\nResponse:\n{response1}")
 
         end = time.time()
