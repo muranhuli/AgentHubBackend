@@ -93,10 +93,11 @@ class LLM(Computable):
     - 基础URL：{PROVIDER}_BASE_URL
     """
 
-    def __init__(self, model: str, custom_provider: Optional[str] = None):
+    def __init__(self, model: str, custom_provider: Optional[str] = None, system_prompt: Optional[str] = None):
         super().__init__(model, custom_provider)
         self.model = model
         self.provider = custom_provider
+        self.system_prompt = system_prompt
 
         # 加载环境变量
         self._load_env()
@@ -136,7 +137,11 @@ class LLM(Computable):
             response_format=structured_model,
             messages=[
                 {
-                    "role": "user", 
+                    'role': 'system',
+                    'content': self.system_prompt if self.system_prompt else "You are a helpful assistant."
+                },
+                {
+                    "role": "user",
                     "content": prompt
                 }
             ],
@@ -171,6 +176,10 @@ class LLM(Computable):
             api_base=self.base_url,
             response_format=structured_model,
             messages=[
+                {
+                    'role': 'system',
+                    'content': self.system_prompt if self.system_prompt else "You are a helpful assistant."
+                },
                 {
                     "role": "user",
                     "content": [
