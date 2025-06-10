@@ -24,6 +24,14 @@ int main() {
     return 0;
 }
 """
+        python_source = """import sys
+def main():
+    a, b = map(int, sys.stdin.read().strip().split())
+    print(a + b)
+
+if __name__ == "__main__":
+    main()
+"""
         base_dir = tempfile.mkdtemp()
         source_dir = os.path.join(base_dir, "source")
         data_dir = os.path.join(base_dir, "data")
@@ -32,7 +40,8 @@ int main() {
         os.makedirs(data_dir, exist_ok=True)
         os.makedirs(output_dir, exist_ok=True)
 
-        open(os.path.join(source_dir, "main.cc"), "w", encoding="utf8").write(cpp_source)
+        # open(os.path.join(source_dir, "main.cc"), "w", encoding="utf8").write(cpp_source)
+        open(os.path.join(source_dir, "main.py"), "w", encoding="utf8").write(python_source)
         open(os.path.join(data_dir, "input"), "w", encoding="utf8").write("3 4\n")
         source = zip_directory_to_bytes(source_dir)
         data = zip_directory_to_bytes(data_dir)
@@ -50,9 +59,10 @@ int main() {
             data_file=data_io,
             command_file=None,
             output_file={"bucket": bucket, "object_name": "output.zip"},
-            execution_timeout=1,
+            execution_timeout=5,
             execution_memory=256,
-            sandbox_template="gcc-13.3-cpp-std_17-O2"
+            # sandbox_template="gcc-13.3-cpp-std_17-O2"
+            sandbox_template="python-3.12"
         )
 
         res = res.result()

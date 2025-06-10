@@ -191,10 +191,11 @@ class CodeSandbox(Service):
                     run_sandbox_log = open(f"{self.run_dir}/run-sandbox-log.txt", "r").read()
                     res["error"] = "System Error while running (sandbox error)"
                     res["error_msg"] = f"Code: {code}, Error: {err}, Output: {out}, Log: {run_sandbox_log}"
-                    return res
                 else:
                     sandbox_out, sandbox_res, sandbox_err = parse_sandbox_output(out)
                     res["running"] = sandbox_out
+
+                    self.__write_output(output_file)
 
                     if sandbox_out["result"] != 0:
                         res["error"] = sandbox_res['tag']
@@ -207,9 +208,6 @@ class CodeSandbox(Service):
                                 f"Reason Tag: {sandbox_err['tag']}, "
                                 f"Reason: {sandbox_err['msg']}"
                             )
-                        return res
-
-                    self.__write_output(output_file)
 
         return res
 
