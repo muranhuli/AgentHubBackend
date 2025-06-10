@@ -11,18 +11,19 @@ if __name__ == '__main__':
         add = Test()
         mul = Mul()
         search = Service("local-web-search")
+        # llm_s = LLM("Qwen3-32B", "VLLM")
         llm_lite = LLM("volcengine/doubao-1-5-lite-32k-250115")
         llm_pro = LLM("volcengine/doubao-1-5-pro-32k-250115")
         llm_dsr1 = LLM("volcengine/deepseek-r1-250528")
 
 
-        query = "有哪些开源的可以运行限定时间内存执行各种语言代码的沙箱？"
+        query = "Qwen3 最新模型"
 
         keywords = llm_pro(f"""用户的查询是：{query}
-请给出 3-5 组相关的搜索关键词，从而全面准确的回答用户的问题。可以尝试使用不同语言或不同的角度检索。
+请给出 1 组相关的搜索关键词，从而全面准确的回答用户的问题。可以尝试使用不同语言或不同的角度检索。
 多组关键词通过|分割，关键词中不能含有 |，可以含有逗号或空格等其余内容。请不要给出任何其他内容。
 输出格式距离：xxx xxx|yy yyyy|zzzzz。
-""").result()
+""").result()["content"]
         keywords = keywords.strip().split("|")
         print("关键词：", keywords)
         web_res = []
@@ -41,7 +42,7 @@ if __name__ == '__main__':
 """))
 
         for i in range(len(simple)):
-            res[i]["content"] = simple[i].result()
+            res[i]["content"] = simple[i].result()["content"]
 
         final_str = ""
 
@@ -53,7 +54,7 @@ if __name__ == '__main__':
         final = llm_dsr1(f"""用户的查询是：{query}
 搜索结果：{final_str}
 请根据搜索结果，请尽可能的全面准确的回答用户的问题。
-""").result()
+""").result()["content"]
         print(final)
 
 

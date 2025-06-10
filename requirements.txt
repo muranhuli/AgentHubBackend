@@ -5,4 +5,5 @@ pyyaml==6.0.2
 litellm==1.72.0
 minio==7.2.5
 pymilvus==2.5.10
+docker==7.1.0
 requests==2.32.3

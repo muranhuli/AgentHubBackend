@@ -19,7 +19,7 @@ COPY mirrors/sources.list      /etc/apt/sources.list
 RUN set -eux; \
     apt-get update -qq; \
     apt-get install -y -qq --no-install-recommends  \
-    ca-certificates tzdata \
+    ca-certificates tzdata libseccomp-dev \
     sudo git unzip wget curl host dos2unix vim \
     make cmake build-essential dosbox; \
     apt-get clean autoclean; \

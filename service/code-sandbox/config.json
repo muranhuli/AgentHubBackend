@@ -4,7 +4,7 @@
   "description": "A sandbox environment for running code snippets safely.",
   "deploy": {
     "mode": "docker",
-    "config_file": "Dockerfile",
+    "build_script": "build",
     "init_script": "init"
   },
   "inputs": {
@@ -85,7 +85,7 @@
     "results": {
       "type": "array",
       "description": "List of search results matching the keywords.",
-      "schema": {
+      "items": {
         "type": "object",
         "properties": {
           "stdout": {
