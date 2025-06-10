@@ -1,10 +1,13 @@
 from io import BytesIO
 
+from minio import S3Error
+
 from core.Computable import Computable
 from pydantic import BaseModel, Field
 from typing import Optional, Union
 import base64
 import os
+from minio.deleteobjects import DeleteObject
 
 def get_image_mime_type(file_path):
     ext = os.path.splitext(file_path)[1].lower()
@@ -46,6 +49,18 @@ class Minio(Computable):
         if not self.minio.bucket_exists(bucket):
             self.minio.make_bucket(bucket)
         return bucket
+
+    def delete_bucket(self, bucket: str) -> str:
+        """Delete a bucket in Minio."""
+        if self.minio.bucket_exists(bucket):
+            objects = self.minio.list_objects(bucket, recursive=True)
+            delete_list = [DeleteObject(obj.object_name) for obj in objects]
+            errors = self.minio.remove_objects(bucket, delete_list)
+            err = "\n".join(f"{error.object_name}: {error.message}" for error in errors)
+            if err:
+                raise RuntimeError(f"Error deleting objects from bucket {bucket}: {err}")
+            self.minio.remove_bucket(bucket)
+        return bucket
     
     def writer(self, bucket: str, object_name: str, data: bytes | str) -> dict:
         """Write data to Minio and return ``True`` on success."""
@@ -59,6 +74,15 @@ class Minio(Computable):
 
     def read(self, bucket: str, object_name: str, output_format: str='bytes') -> Optional[Union[bytes, str]]:
         """Read data from Minio and return it."""
+
+        try:
+            self.minio.stat_object(bucket, object_name)
+        except S3Error as exc:
+            if exc.code == 'NoSuchKey':
+                return None
+            else:
+                raise exc
+
         response = self.minio.get_object(bucket, object_name)
         try:
             data = response.read()
@@ -92,5 +116,7 @@ class Minio(Computable):
             return self.delete(*args, **kwargs)
         elif function_name == "make_bucket":
             return self.make_bucket(*args, **kwargs)
+        elif function_name == "delete_bucket":
+            return self.delete_bucket(*args, **kwargs)
         else:
             raise ValueError(f"Unknown function name: {function_name}")
