@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# This script builds the Docker images for the CodeSandbox environment.
+cp ../../requirements.txt .
+
 # Define images and their Dockerfiles
 declare -A IMAGES=(
   [codesandbox-env-base]=base.Dockerfile
