@@ -6,6 +6,7 @@ import tempfile
 import uuid
 
 import docker
+import atexit
 
 from core.Context import Context
 
@@ -76,6 +77,8 @@ class CodeSandbox(Service):
 
     def close(self):
         shutil.rmtree(self.base_dir)
+        self.container.stop()
+        self.container.remove(force=True)
 
     def __cleanup_workspace(self):
         clear_directory(self.run_dir)
@@ -216,7 +219,8 @@ if __name__ == "__main__":
         service = None
         try:
             service = CodeSandbox()
+            atexit.register(service.close)
             service.run()
         finally:
-            if service:
+            if service and not atexit._ncallbacks():
                 service.close()
