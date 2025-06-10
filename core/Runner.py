@@ -6,6 +6,7 @@ import pika
 
 from core.ComputableResult import ComputableResult
 from core.Context import get_context, Context
+from core.Utils import deserialize, serialize
 
 
 class Runner:
@@ -41,7 +42,7 @@ class Runner:
         4. list: runner-node-result:{task_id}:{exec_id} string (结果 / 错误信息)
 
         """
-        job = json.loads(body)
+        job = deserialize(body)
         exec_id = job["exec_id"]
         task_id = job["task_id"]
 
@@ -59,7 +60,7 @@ class Runner:
                     # 发入队列说明已经完成了计算
                     arg_key = f"runner-node-result:{task_id}:{arg['exec_id']}"
                     raw = self.redis.lrange(arg_key, 0, -1)[0]
-                    args.append(json.loads(raw)["data"])
+                    args.append(deserialize(raw))
                 else:
                     args.append(arg["value"])
             kwargs = {}
@@ -67,7 +68,7 @@ class Runner:
                 if v["is_ref"]:
                     kw_key = f"runner-node-result:{task_id}:{v['exec_id']}"
                     raw = self.redis.lrange(kw_key, 0, -1)[0]
-                    kwargs[k] = json.loads(raw)["data"]
+                    kwargs[k] = deserialize(raw)
                 else:
                     kwargs[k] = v["value"]
 
@@ -82,7 +83,7 @@ class Runner:
             res = compute(*args, **kwargs)
         except Exception as e:
             self.redis.hset(task_key, f"state:{exec_id}", "ERROR")
-            self.redis.lpush(result_key, json.dumps({"data": str(e)}))
+            self.redis.lpush(result_key, serialize({"error": str(e)})[1])
             ch.basic_ack(delivery_tag=method.delivery_tag)
             # raise RuntimeError(f"任务 {exec_id} 执行失败: {e}")
         else:
@@ -103,7 +104,7 @@ class Runner:
 
                 for feid in finish_exec_id_list:
                     self.redis.hset(task_key, f"state:{feid}", "FINISHED")
-                    self.redis.lpush(f"runner-node-result:{task_id}:{feid}", json.dumps({"data": res}))
+                    self.redis.lpush(f"runner-node-result:{task_id}:{feid}", serialize(res)[1])
                     # 调度子任务
                     children = self.redis.smembers(f"runner-node-waiters:{task_id}:{feid}") or []
                     for cid in children:
@@ -113,7 +114,7 @@ class Runner:
                             self.ch.basic_publish(
                                 exchange='',
                                 routing_key=self.ctx.queue,
-                                body=self.redis.hget(task_key, f"job:{cid}"),
+                                body=self.redis.hget(task_key, f"job:{cid}").encode('latin1'),
                                 properties=pika.BasicProperties(delivery_mode=2)
                             )
             ch.basic_ack(delivery_tag=method.delivery_tag)

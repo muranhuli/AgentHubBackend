@@ -4,6 +4,7 @@ redis==6.2.0
 pyyaml==6.0.2
 litellm==1.72.2
 minio==7.2.15
-pymilvus==2.5.10
+pymilvus==2.5.11
 docker==7.1.0
-requests==2.32.3
+requests==2.32.4
+msgpack==1.1.0

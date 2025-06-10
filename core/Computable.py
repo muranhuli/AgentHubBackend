@@ -1,9 +1,8 @@
-import json
-
 import pika
 
 from core.ComputableResult import ComputableResult
 from core.Context import get_context
+from core.Utils import serialize
 
 
 class Computable:
@@ -71,16 +70,17 @@ class Computable:
         }
 
         dep = ",".join(str(dep) for dep in dep_list)
+        ser_bin_job, ser_str_job = serialize(job)
 
         # 原子写入状态、依赖、job
-        dep_cnt = self.ctx.init_task(keys=[task_key, task_waiter_key], args=[exec_id, json.dumps(job), dep])
+        dep_cnt = self.ctx.init_task(keys=[task_key, task_waiter_key], args=[exec_id, ser_str_job, dep])
 
         # 依赖为 0 时，直接发布到 RabbitMQ
         if dep_cnt == 0:
             self.ch.basic_publish(
                 exchange='',
                 routing_key=self.ctx.queue,
-                body=json.dumps(job),
+                body=ser_bin_job,
                 properties=pika.BasicProperties(delivery_mode=2)
             )
 

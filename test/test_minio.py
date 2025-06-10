@@ -31,7 +31,7 @@ if __name__ == "__main__":
         read_result = MinioRead()(
             bucket=test_bucket,
             object_name=test_object
-        ).result().data
+        ).result()
         print(f"Read data: {read_result.decode('utf-8')}")
         
         # Verify data integrity
@@ -40,23 +40,23 @@ if __name__ == "__main__":
         else:
             print("❌ Minio read/write test failed!")
         
-        # # Test with bytes data
-        # print("\nTesting with bytes data...")
-        # bytes_data = b"Binary data test \x00\x01\x02"
-        # bytes_object = "test-binary.bin"
+        # Test with bytes data
+        print("\nTesting with bytes data...")
+        bytes_data = b"Binary data test \x00\x01\x02"
+        bytes_object = "test-binary.bin"
         
-        # MinioWrite()(
-        #     bucket=test_bucket,
-        #     object_name=bytes_object,
-        #     data=bytes_data
-        # )
+        MinioWrite()(
+            bucket=test_bucket,
+            object_name=bytes_object,
+            data=bytes_data
+        )
         
-        # read_bytes = MinioRead()(
-        #     bucket=test_bucket,
-        #     object_name=bytes_object
-        # ).data
+        read_bytes = MinioRead()(
+            bucket=test_bucket,
+            object_name=bytes_object
+        ).result()
         
-        # if read_bytes == bytes_data:
-        #     print("✅ Binary data test passed!")
-        # else:
-        #     print("❌ Binary data test failed!")
+        if read_bytes == bytes_data:
+            print("✅ Binary data test passed!")
+        else:
+            print("❌ Binary data test failed!")

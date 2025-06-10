@@ -1,3 +1,5 @@
+import os
+
 from core.Context import Context
 import uuid
 from coper.LLM import LLM
@@ -17,18 +19,19 @@ if __name__ == "__main__":
         # 使用 LLM 类
         # llm = LLM("volcengine/doubao-1-5-lite-32k-250115")
         # llm = LLM("volcengine/doubao-1-5-thinking-pro-250415")
-        llm_vision = LLM("doubao-1-5-thinking-vision-pro-250428", "ARK")
+        llm_vision = LLM("volcengine/doubao-1-5-thinking-vision-pro-250428")
         llm_language = LLM("Qwen3-32B", "VLLM")
 
         # 视觉大模型测试
         prompt = "回答这个图片，说明这个图片做了什么？请用中文回答。"
-        response1 = llm_vision(prompt, './test/test.jpg', structured_output=CodeAnswer.model_json_schema()).result()
+        image_path = os.path.join(os.path.dirname(__file__), 'test.jpg')
+        response1 = llm_vision(prompt, image_path).result()
         print(f"Prompt: {prompt}\ntype: {type(response1)}\nResponse:\n{response1}")
         print('='*50)
 
         # 语言大模型测试
         prompt = "写一个Python函数，计算两个数的和，并返回结果。请用中文回答。"
-        response1 = llm_vision(prompt, structured_output=CodeAnswer.model_json_schema()).result()
+        response1 = llm_vision(prompt).result()
         print(f"Prompt: {prompt}\ntype: {type(response1)}\nResponse:\n{response1}")
 
         end = time.time()

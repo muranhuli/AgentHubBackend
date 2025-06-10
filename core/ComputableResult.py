@@ -1,5 +1,7 @@
 import json
 from core.Context import get_context
+from core.Utils import deserialize
+
 
 # 逻辑非运算（不能重载 not，提供方法代替）
 def logical_not(self):
@@ -32,7 +34,7 @@ class ComputableResult:
         _, res = r.blpop([res_list_name])
         r.rpush(res_list_name, res)
 
-        res = json.loads(res)["data"]
+        res = deserialize(res)
         state = r.hget(f"runner-node:{task_id}", f"state:{self.exec_id}")
         if state == "FINISHED":
             return res
