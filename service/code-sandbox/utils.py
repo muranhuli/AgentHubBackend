@@ -1,6 +1,8 @@
-import os
+import json
 import shutil
 from typing import Optional, List
+
+import os
 
 
 def build_sandbox_cmd(
@@ -63,7 +65,7 @@ def build_sandbox_cmd(
 
 
 
-def exec_docker(c, cmd: List[str], workdir: str = "/"):
+def exec_docker(c, cmd: List[str], workdir: str = "/", debug=False):
     """
     Execute a command in a Docker container.
     :param c: The Docker container object.
@@ -71,12 +73,14 @@ def exec_docker(c, cmd: List[str], workdir: str = "/"):
     :param workdir: The working directory inside the container.
     :return: The exit code and output of the command.
     """
-    print(f"CMD: {' '.join(cmd)} in {workdir}")
+    if debug:
+        print(f"CMD: {' '.join(cmd)} in {workdir}")
     exec_code, (stdout, stderr) = c.exec_run(cmd, workdir=workdir, stream=False, demux=True)
-    print(f"Exit code: {exec_code}")
-    if stdout is not None:
+    if debug:
+        print(f"Exit code: {exec_code}")
+    if debug and stdout is not None:
         print(f"Stdout: {stdout.decode('utf-8')}")
-    if stderr is not None:
+    if debug and stderr is not None:
         print(f"Stderr: {stderr.decode('utf-8')}")
     return (
         exec_code,
@@ -94,3 +98,51 @@ def clear_directory(directory):
             os.unlink(item_path)
         else:
             shutil.rmtree(item_path)
+
+
+
+
+
+sandbox_result_map = {
+    0: ("SUCCESS", "program finished normally"),
+    1: ("CPU_TIME_LIMIT_EXCEEDED", "exceeded CPU time limit"),
+    2: ("REAL_TIME_LIMIT_EXCEEDED", "exceeded real time limit"),
+    3: ("MEMORY_LIMIT_EXCEEDED", "exceeded memory limit"),
+    4: ("RUNTIME_ERROR", "runtime error or killed by signal"),
+    5: ("SYSTEM_ERROR", "sandbox system error"),
+    6: ("OUTPUT_LIMIT_EXCEEDED", "exceeded output size limit")
+}
+
+
+sandbox_error_map = {
+    0: ("SUCCESS", "everything is ok"),
+    1: ("INVALID_CONFIG", "invalid config"),
+    2: ("FORK_FAILED", "fork() failed"),
+    3: ("PTHREAD_FAILED", "thread creation failed"),
+    4: ("WAIT_FAILED", "wait4() failed"),
+    5: ("DUP2_FAILED", "dup2() failed"),
+    6: ("SETRLIMIT_FAILED", "setrlimit() failed"),
+    7: ("SETUID_FAILED", "setuid() or setgid() failed"),
+    8: ("LOAD_SECCOMP_FAILED", "loading seccomp rules failed"),
+    9: ("EXECVE_FAILED", "execve() failed"),
+    10: ("PTRACE_FAILED", "ptrace() failed"),
+    11: ("SPJ_ERROR", "Special Judge failed"),
+    12: ("ROOT_REQUIRED", "sandbox must run as root"),
+    13: ("NOBODY_REQUIRED", "user program must run as nobody")
+}
+
+def parse_sandbox_output(out: str) -> tuple[dict, dict, dict]:
+    # {"cpu_time":12,"real_time":15,"memory":204800,"signal":0,"exit_code":0,"error":0,"result":0}
+    out = json.loads(out)
+    result, error = {}, {}
+    result["tag"] = sandbox_result_map.get(out["result"], ("UNKNOWN", "unknown result"))[0]
+    result["msg"] = sandbox_result_map.get(out["result"], ("UNKNOWN", "unknown result"))[1]
+
+    if out["result"] == 5:
+        error["tag"] = sandbox_error_map.get(out["error"], ("UNKNOWN", "unknown error"))[0]
+        error["msg"] = sandbox_error_map.get(out["error"], ("UNKNOWN", "unknown error"))[1]
+
+    return out, result, error
+
+
+

@@ -20,6 +20,7 @@ sandbox_templates = {
             "max_memory": 512 * 1024 * 1024,  # 512 MiB
             "max_output_size": 32 * 1024 * 1024,  # 32 MiB
             "log_path": "/workspace/run/compilation-sandbox-log.txt",
+            "output_path": "/workspace/run/compilation-output.txt",
         },
         "run":{
             "exe_path": "/workspace/run/main",
@@ -50,6 +51,7 @@ sandbox_templates = {
             "max_memory": 512 * 1024 * 1024,  # 512 MiB
             "max_output_size": 32 * 1024 * 1024,  # 32 MiB
             "log_path": "/workspace/run/compilation-sandbox-log.txt",
+            "output_path": "/workspace/run/compilation-output.txt",
         },
         "run":{
             "exe_path": "/workspace/run/main",
@@ -80,6 +82,7 @@ sandbox_templates = {
             "max_memory": 512 * 1024 * 1024,  # 512 MiB
             "max_output_size": 32 * 1024 * 1024,  # 32 MiB
             "log_path": "/workspace/run/compilation-sandbox-log.txt",
+            "output_path": "/workspace/run/compilation-output.txt",
         },
         "run":{
             "exe_path": "/workspace/run/main",
@@ -111,6 +114,7 @@ sandbox_templates = {
             "max_memory": 512 * 1024 * 1024,  # 512 MiB
             "max_output_size": 32 * 1024 * 1024,  # 32 MiB
             "log_path": "/workspace/run/compilation-sandbox-log.txt",
+            "output_path": "/workspace/run/compilation-output.txt",
         },
         "run":{
             "exe_path": "/workspace/run/main",
@@ -139,6 +143,7 @@ sandbox_templates = {
             "max_memory": 512 * 1024 * 1024,  # 512 MiB
             "max_output_size": 32 * 1024 * 1024,  # 32 MiB
             "log_path": "/workspace/run/compilation-sandbox-log.txt",
+            "output_path": "/workspace/run/compilation-output.txt",
         },
         "run":{
             "exe_path": "/workspace/run/main",
@@ -166,6 +171,7 @@ sandbox_templates = {
             "max_memory": 512 * 1024 * 1024,  # 512 MiB
             "max_output_size": 32 * 1024 * 1024,  # 32 MiB
             "log_path": "/workspace/run/compilation-sandbox-log.txt",
+            "output_path": "/workspace/run/compilation-output.txt",
         },
         "run":{
             "exe_path": "/workspace/run/main",
@@ -249,6 +255,7 @@ sandbox_templates = {
             "max_memory": 0,
             "max_output_size": 32 * 1024 * 1024,  # 32 MiB
             "log_path": "/workspace/run/compilation-sandbox-log.txt",
+            "output_path": "/workspace/run/compilation-output.txt",
         },
         "run":{
             "exe_path": "/opt/java/openjdk8/bin/java",
@@ -284,6 +291,7 @@ sandbox_templates = {
             "max_memory": 0,
             "max_output_size": 32 * 1024 * 1024,  # 32 MiB
             "log_path": "/workspace/run/compilation-sandbox-log.txt",
+            "output_path": "/workspace/run/compilation-output.txt",
         },
         "run":{
             "exe_path": "/opt/java/openjdk17/bin/java",
@@ -319,6 +327,7 @@ sandbox_templates = {
             "max_memory": 0,
             "max_output_size": 32 * 1024 * 1024,  # 32 MiB
             "log_path": "/workspace/run/compilation-sandbox-log.txt",
+            "output_path": "/workspace/run/compilation-output.txt",
         },
         "run":{
             "exe_path": "/opt/java/openjdk21/bin/java",
