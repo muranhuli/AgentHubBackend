@@ -6,6 +6,7 @@ import os
 from core.Context import Context
 from coper.MinioWrite import MinioWrite
 from coper.MinioRead import MinioRead
+from coper.MinioReadBase64 import MinioReadBase64
 
 
 if __name__ == "__main__":
@@ -60,3 +61,10 @@ if __name__ == "__main__":
             print("✅ Binary data test passed!")
         else:
             print("❌ Binary data test failed!")
+
+        
+        image_base64 = MinioReadBase64()(
+            bucket=test_bucket,
+            object_name='test.jpg'
+        ).result()
+        print(f"Image Base64 data: {image_base64[:50]}...")

@@ -1,5 +1,6 @@
 from core.Computable import Computable
 from dotenv import load_dotenv
+from coper.Mul import Mul
 import os
 import base64
 import litellm
@@ -15,21 +16,6 @@ type_mapping = {
     'object': dict,
     'array': list
 }
-
-# 根据文件扩展名确定MIME类型
-
-
-def get_image_mime_type(file_path):
-    ext = os.path.splitext(file_path)[1].lower()
-    mime_types = {
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.png': 'image/png',
-        '.gif': 'image/gif',
-        '.webp': 'image/webp',
-        '.bmp': 'image/bmp'
-    }
-    return mime_types.get(ext, 'image/jpeg')  # 默认为jpeg
 
 
 def restore_model_from_schema(schema: dict) -> type[BaseModel]:
@@ -155,25 +141,16 @@ class LLM(Computable):
         )
         return response
 
-    def vision_llm(self, prompt: str, image_path: str, structured_model: Optional[type[BaseModel]] = None):
+    def vision_llm(self, prompt: str, image_base64: str, structured_model: Optional[type[BaseModel]] = None):
         """Invoke the LLM for vision tasks.
 
         Args:
             prompt: Text prompt sent to the model.
-            image_path: Path to the image file.
+            image_base64: Base64 encoded image data.
 
         Returns:
             A dictionary representation of :class:`LLMResponse`.
         """
-        # 检查图片url是否存在，不存在则抛出异常
-        if not os.path.exists(image_path):
-            raise FileNotFoundError(f"Image file not found: {image_path}")
-        # 读取图片文件并转成base64编码
-        with open(image_path, "rb") as image_file:
-            image_base64 = base64.b64encode(image_file.read()).decode('utf-8')
-            # 根据文件类型添加正确的data URL前缀
-            mime_type = get_image_mime_type(image_path)
-            image_base64 = f"data:{mime_type};base64,{image_base64}"
 
         # 调用litellm接口
         response = litellm.completion(
@@ -198,7 +175,7 @@ class LLM(Computable):
         )
         return response
 
-    def compute(self, prompt: str, image_path: Optional[str] = None, structured_output: Optional[dict] = None) -> dict:
+    def compute(self, prompt: str, image_base64: Optional[str] = None, structured_output: Optional[dict] = None) -> dict:
         """Invoke the LLM and return the response.
 
         Args:
@@ -213,10 +190,10 @@ class LLM(Computable):
         if structured_output:
             structured_model = restore_model_from_schema(structured_output)
 
-        if image_path is None:
+        if image_base64 is None:
             llm_response = self.language_llm(prompt, structured_model)
         else:
-            llm_response = self.vision_llm(prompt, image_path, structured_model)
+            llm_response = self.vision_llm(prompt, image_base64, structured_model)
 
         message = llm_response['choices'][0]['message']
         content = message.get("content", "")
