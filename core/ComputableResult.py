@@ -41,6 +41,13 @@ class ComputableResult:
 
         raise Exception(res)
 
+    def __getstate__(self):
+        return {"exec_id": self.exec_id}
+
+    def __setstate__(self, state):
+        self.exec_id = state["exec_id"]
+        self.ctx = get_context()
+
     def __repr__(self):
         return f"<Result id={self.exec_id}>"
 

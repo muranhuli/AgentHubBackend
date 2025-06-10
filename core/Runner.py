@@ -55,22 +55,32 @@ class Runner:
         try:
             self.redis.hset(task_key, f"state:{exec_id}", "RUNNING")
             args = []
-            for arg in job["args"]:
-                if arg["is_ref"]:
-                    # 发入队列说明已经完成了计算
-                    arg_key = f"runner-node-result:{task_id}:{arg['exec_id']}"
-                    raw = self.redis.lrange(arg_key, 0, -1)[0]
-                    args.append(deserialize(raw))
+
+            def get_value(exec_id_):
+                key = f"runner-node-result:{task_id}:{exec_id_}"
+                state = self.redis.hget(task_key, f"state:{exec_id_}")
+                if state == "ERROR":
+                    raise RuntimeError(f"Previous task {arg['exec_id']} failed")
+                raw = self.redis.lrange(key, 0, -1)[0]
+                return deserialize(raw)
+
+            def get_value_obj(obj):
+                if isinstance(obj, ComputableResult):
+                    return get_value(obj.exec_id)
+                elif isinstance(obj, dict):
+                    return {get_value_obj(k): get_value_obj(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [get_value_obj(item) for item in obj]
+                elif isinstance(obj, tuple):
+                    return tuple(get_value_obj(item) for item in obj)
                 else:
-                    args.append(arg["value"])
+                    return obj
+
+            for arg in job["args"]:
+                args.append(get_value_obj(arg))
             kwargs = {}
             for k, v in job.get("kwargs", {}).items():
-                if v["is_ref"]:
-                    kw_key = f"runner-node-result:{task_id}:{v['exec_id']}"
-                    raw = self.redis.lrange(kw_key, 0, -1)[0]
-                    kwargs[k] = deserialize(raw)
-                else:
-                    kwargs[k] = v["value"]
+                kwargs[k] = get_value_obj(v)
 
             # 动态加载 operator 并执行
             module = importlib.import_module(f"coper.{job['task']}")
@@ -82,9 +92,14 @@ class Runner:
 
             res = compute(*args, **kwargs)
         except Exception as e:
+            # 获取递归栈
+            import traceback
+            stack = traceback.format_exc()
             self.redis.hset(task_key, f"state:{exec_id}", "ERROR")
-            self.redis.lpush(result_key, serialize({"error": str(e)})[1])
+            self.redis.lpush(result_key, serialize({"error": str(e), "stack": stack})[1])
             ch.basic_ack(delivery_tag=method.delivery_tag)
+            print(f"任务 {exec_id} 执行失败: {e}")
+            print(stack)
             # raise RuntimeError(f"任务 {exec_id} 执行失败: {e}")
         else:
             # 成功

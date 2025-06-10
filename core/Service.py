@@ -1,6 +1,7 @@
 import json
 
 from core.Computable import Computable
+from core.Utils import deserialize
 
 
 class Service(Computable):
@@ -52,15 +53,20 @@ class Service(Computable):
         处理接收到的消息。
         子类可以重写此方法以实现自定义的消息处理逻辑。
         """
-        task = json.loads(body)
+        task = deserialize(body)
+        self.ctx.set_task(task["task_id"])
         return_queue = task["return_queue"]
         args = task["args"]
+        kwargs = task["kwargs"]
         rv = {}
         try:
-            res = self.compute(*args)
+            res = self.compute(*args, **kwargs)
         except Exception as e:
+            import traceback
+            stack = traceback.format_exc()
             rv["status"] = "error"
             rv["message"] = str(e)
+            rv["stack"] = stack
         else:
             rv["status"] = "success"
             rv["result"] = res

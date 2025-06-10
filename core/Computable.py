@@ -42,29 +42,29 @@ class Computable:
         # 原子自增 exec_id
         exec_id = self.redis.incr(f"runner-node-counter:{task_id}")
 
-        arg_list = []
         dep_list = []
-        for arg in args:
-            if isinstance(arg, ComputableResult):
-                arg_list.append({"is_ref": True, "exec_id": arg.exec_id})
-                dep_list.append(arg.exec_id)
-            else:
-                arg_list.append({"is_ref": False, "value": arg})
 
-        kwarg_dict = {}
-        for k, v in kwargs.items():
-            if isinstance(v, ComputableResult):
-                kwarg_dict[k] = {"is_ref": True, "exec_id": v.exec_id}
-                dep_list.append(v.exec_id)
-            else:
-                kwarg_dict[k] = {"is_ref": False, "value": v}
+        def find_dep(obj):
+            if isinstance(obj, ComputableResult):
+                dep_list.append(obj.exec_id)
+            elif isinstance(obj, list) or isinstance(obj, tuple):
+                for item in obj:
+                    find_dep(item)
+            elif isinstance(obj, dict):
+                for k, v in obj.items():
+                    find_dep(k)
+                    find_dep(v)
+            return None
+
+        find_dep(args)
+        find_dep(kwargs)
 
         job = {
             "exec_id": exec_id,
             "task_id": task_id,
             "task": self.__class__.__name__,
-            "args": arg_list,
-            "kwargs": kwarg_dict,
+            "args": args,
+            "kwargs": kwargs,
             "init_args": self.init_args,
             "init_kwargs": self.init_kwargs,
         }
@@ -85,6 +85,7 @@ class Computable:
             )
 
         return ComputableResult(exec_id)
+
 
     def compute(self, *args, **kwargs):
         raise NotImplementedError("compute must return a value or raise")
