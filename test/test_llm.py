@@ -5,7 +5,7 @@ import uuid
 from coper.LLM import LLM
 import time
 from pydantic import BaseModel, Field
-from coper.MinioReadBase64 import MinioReadBase64
+from coper.Minio import Minio
 
 
 class CodeAnswer(BaseModel):
@@ -25,9 +25,11 @@ if __name__ == "__main__":
 
         # 视觉大模型测试
         prompt = "回答这个图片，说明这个图片做了什么？请用中文回答。"
-        image_base64 = MinioReadBase64()(
+        image_base64 = Minio()(
+            function_name="read",
             bucket="test-bucket",
-            object_name="PixPin_2025-06-10_16-05-14.jpg"
+            object_name="PixPin_2025-06-10_16-05-14.jpg",
+            output_format="base64"
         )
         response1 = llm_vision(prompt, image_base64).result()
         print(f"Prompt: {prompt}\ntype: {type(response1)}\nResponse:\n{response1}")
