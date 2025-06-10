@@ -47,9 +47,9 @@ class LLMInput(BaseModel):
         ..., 
         description="The text prompt to send to the LLM model. This is the main instruction or query."
     )
-    image_path: Optional[str] = Field(
+    image_base64: Optional[str] = Field(
         default=None,
-        description="Optional path to an image file for vision tasks. When provided, enables multimodal processing."
+        description="Optional base64-encoded image data for vision tasks. When provided, enables multimodal processing."
     )
     structured_output: Optional[dict] = Field(
         default=None,

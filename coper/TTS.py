@@ -9,7 +9,10 @@ class TTSInput(BaseModel):
     """Input model for :class:`TTS`."""
 
     text: str = Field(..., description="Text to convert to speech")
-    filename: str = Field(default="output.mp3", description="Output filename for the audio file")
+    minio_path: str = Field(
+        default='{"bucket": "default-bucket", "object_name": "default-object"}',
+        description="Minio path to save the audio file in JSON format"
+    )
     model: str = Field(default="speech-02-hd", description="Model to use for TTS")
     voice_id: str = Field(
         default="Boyan_new_platform", 
