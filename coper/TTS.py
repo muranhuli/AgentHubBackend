@@ -3,7 +3,7 @@ import os
 from core.Computable import Computable
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
-
+from coper.Minio import Minio
 
 class TTSInput(BaseModel):
     """Input model for :class:`TTS`."""
@@ -56,7 +56,7 @@ class TTS(Computable):
     def compute(
         self, 
         text: str,
-        filename: str = "tts",
+        minio_path: dict[str, str]={'bucket': 'default-bucket', 'object_name': 'default-object'},
         model: str = "speech-02-hd",
         voice_id: str = "Boyan_new_platform",
         speed: int = 1,
@@ -123,37 +123,54 @@ class TTS(Computable):
                 if "data" in response_data and "audio" in response_data["data"]:
                     hex_audio = response_data["data"]["audio"]
                     audio_bytes = bytes.fromhex(hex_audio)
-                    # Handle filename with extension
-                    if not filename.endswith(f".{audio_format}"):
-                        full_filename = f"{filename}.{audio_format}"
+                    # 获取写入minio路径的元数据信息
+                    bucket = minio_path.get("bucket", "default-bucket")
+                    object_name = minio_path.get("object_name", "default-object")
+                    if not object_name.endswith(f".{audio_format}"):
+                        full_filename = f"{object_name}.{audio_format}"
                     else:
-                        full_filename = filename
-                    # Save the audio file
-                    with open(full_filename, 'wb') as f:
-                        f.write(audio_bytes)
-                    # Get absolute path
-                    abs_filename = os.path.abspath(full_filename)
+                        full_filename = object_name
+                    # 写入音频数据到Minio
+                    Minio()(
+                        function_name="write",
+                        bucket=bucket,
+                        object_name=full_filename,
+                        data=audio_bytes
+                    )
+                    
                     return {
                         'success': True,
-                        'filename': abs_filename,
+                        'minio_path': {
+                            'bucket': bucket,
+                            'object_name': full_filename
+                        },
                         'message': "Audio generated successfully"
                     }
                 else:
                     return {
                         'success': False,
-                        'filename': "",
+                        'minio_path': {
+                            'bucket': "",
+                            'object_name': ""
+                        },
                         'message': "No audio data found in response"
                     }
             else:
                 return {
                     'success': False,
-                    'filename': "",
+                    'minio_path': {
+                        'bucket': "",
+                        'object_name': ""
+                    },
                     'message': f"Request failed with status code {response.status_code}"
                 }
                 
         except Exception as e:
             return {
                 'success': False,
-                'filename': "",
+                'minio_path': {
+                    'bucket': "",
+                    'object_name': ""
+                },
                 'message': str(e)
             }
