@@ -40,18 +40,22 @@ class Minio(Computable):
     input_schema = MinioInput
     output_schema = MinioOutput
     description = "Write a file to Minio"
+
+    def make_bucket(self, bucket: str) -> str:
+        """Create a bucket in Minio."""
+        if not self.minio.bucket_exists(bucket):
+            self.minio.make_bucket(bucket)
+        return bucket
     
-    def writer(self, bucket: str, object_name: str, data: bytes | str) -> bool:
+    def writer(self, bucket: str, object_name: str, data: bytes | str) -> dict:
         """Write data to Minio and return ``True`` on success."""
         
         if isinstance(data, str):
             data = data.encode()
         if not isinstance(data, (bytes, bytearray)):
             raise ValueError("data must be bytes or str")
-        if not self.minio.bucket_exists(bucket):
-            self.minio.make_bucket(bucket)
         self.minio.put_object(bucket, object_name, BytesIO(data), len(data))
-        return True
+        return {"bucket": bucket, "object_name": object_name}
 
     def read(self, bucket: str, object_name: str, output_format: str='bytes') -> Optional[Union[bytes, str]]:
         """Read data from Minio and return it."""
@@ -64,40 +68,29 @@ class Minio(Computable):
                 data = base64.b64encode(data).decode('utf-8')
                 mime_type = get_image_mime_type(object_name)
                 data = f"data:{mime_type};base64,{data}"
+            return data
         finally:
             response.close()
-        return data
 
-    def delete(self, bucket: str, object_name: str) -> bool:
+
+    def delete(self, bucket: str, object_name: str) -> dict:
         """Delete an object from Minio and return ``True`` when done."""
         try:
             self.minio.remove_object(bucket, object_name)
         except Exception as e:
             raise Exception(f"Error deleting object {object_name} from bucket {bucket}: {e}")
         else:
-            return True
+            return {"bucket": bucket, "object_name": object_name}
 
-    def compute(self, function_name: str, **kwargs) -> Optional[Union[bool, bytes, str]]:
+    def compute(self, function_name: str, *args, **kwargs) -> Optional[Union[bool, bytes, str, dict]]:
         """Execute the specified function and return the result."""
         if function_name == "write":
-            bucket = kwargs.get("bucket")
-            object_name = kwargs.get("object_name")
-            data = kwargs.get("data")
-            if bucket is None or object_name is None or data is None:
-                raise ValueError("bucket, object_name, and data are required for write operation")
-            return self.writer(bucket, object_name, data)
+            return self.writer(*args, **kwargs)
         elif function_name == "read":
-            bucket = kwargs.get("bucket")
-            object_name = kwargs.get("object_name")
-            output_format = kwargs.get("output_format", "bytes")
-            if bucket is None or object_name is None:
-                raise ValueError("bucket and object_name are required for read operation")
-            return self.read(bucket, object_name, output_format)
+            return self.read(*args, **kwargs)
         elif function_name == "delete":
-            bucket = kwargs.get("bucket")
-            object_name = kwargs.get("object_name")
-            if bucket is None or object_name is None:
-                raise ValueError("bucket and object_name are required for delete operation")
-            return self.delete(bucket, object_name)
+            return self.delete(*args, **kwargs)
+        elif function_name == "make_bucket":
+            return self.make_bucket(*args, **kwargs)
         else:
             raise ValueError(f"Unknown function name: {function_name}")
