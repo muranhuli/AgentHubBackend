@@ -1,7 +1,7 @@
 import uuid
 
 from coper.LLM import LLM
-from coper.Mul import Mul
+from coper.basic_ops import Mul
 from coper.Test import Test
 from core.Context import Context
 from coper.Service import Service
