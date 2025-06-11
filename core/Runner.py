@@ -83,8 +83,9 @@ class Runner:
                 kwargs[k] = get_value_obj(v)
 
             # 动态加载 operator 并执行
-            module = importlib.import_module(f"coper.{job['task']}")
-            cls = getattr(module, job["task"])
+            module_path, cls_name = job["task"].rsplit(".", 1)
+            module = importlib.import_module(module_path)
+            cls = getattr(module, cls_name)
             init_args = job.get("init_args", [])
             init_kwargs = job.get("init_kwargs", {})
             instance = cls(*init_args, **init_kwargs)
