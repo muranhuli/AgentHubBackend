@@ -1,5 +1,5 @@
 from core.Computable import Computable
-from coper.Add import Add
+from coper.basic_ops import Add
 from pydantic import BaseModel, Field
 
 

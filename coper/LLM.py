@@ -1,6 +1,6 @@
 from core.Computable import Computable
 from dotenv import load_dotenv
-from coper.Mul import Mul
+from coper.basic_ops import Mul
 import os
 import base64
 import litellm

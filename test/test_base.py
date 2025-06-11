@@ -5,8 +5,8 @@ if __name__ == "__main__":
     import os
 
     from core.Context import Context
-    from coper.Mul import Mul
-    from coper.Add import Add
+    from coper.basic_ops import Mul
+    from coper.basic_ops import Add
 
     with Context(task_id=str(uuid.uuid4())):
         mul = Mul()
