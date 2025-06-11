@@ -62,7 +62,7 @@ class Computable:
         job = {
             "exec_id": exec_id,
             "task_id": task_id,
-            "task": self.__class__.__name__,
+            "task": f"{self.__class__.__module__}.{self.__class__.__name__}",
             "args": args,
             "kwargs": kwargs,
             "init_args": self.init_args,
