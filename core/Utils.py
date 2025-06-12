@@ -1,7 +1,9 @@
 import io
 import os
+import shutil
 import zipfile
 from pathlib import Path
+from typing import List
 
 import msgpack
 import zlib
@@ -145,3 +147,51 @@ def unzip_bytes_to_directory(zip_bytes, target_dir, flatten=False, overwrite=Fal
     finally:
         if zip_buffer:
             zip_buffer.close()
+
+
+def copy_file_list(project_root: str, base_dir: str, copy_list: List[str]) -> None:
+    """
+    将 project_root 下的指定文件或目录复制到 base_dir。
+
+    如果 base_dir 不存在，函数会自动创建。若目标已存在，会先删除再复制。
+
+    参数
+    ----
+    project_root : str
+        项目根目录路径，应包含要复制的文件或目录。
+    base_dir : str
+        目标目录路径，最终会在此目录下生成相应的文件或目录副本。
+    copy_list : List[str]
+        要复制的名称列表，可以是文件或目录。
+
+    抛出
+    ----
+    FileNotFoundError
+        当 project_root 下缺少指定文件或目录时。
+    OSError
+        IO 操作失败时抛出。
+    """
+    # 确保目标根目录存在
+    os.makedirs(base_dir, exist_ok=True)
+
+    for name in copy_list:
+        src = os.path.join(project_root, name)
+        dst = os.path.join(base_dir, name)
+
+        if not os.path.exists(src):
+            raise FileNotFoundError(f"source does not exist: {src}")
+
+        # 如果目标已存在，删掉再来一次
+        if os.path.exists(dst):
+            if os.path.isdir(dst) and not os.path.islink(dst):
+                shutil.rmtree(dst)
+            else:
+                os.remove(dst)
+
+        # 根据类型执行复制
+        if os.path.isdir(src):
+            shutil.copytree(src, dst)
+        else:
+            # 确保父目录存在
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(src, dst)

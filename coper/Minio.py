@@ -41,6 +41,10 @@ class Minio(Computable):
                 raise RuntimeError(f"Error deleting objects from bucket {bucket}: {err}")
             self.minio.remove_bucket(bucket)
         return bucket
+
+    def write_s3(self, file: dict, data: bytes | str) -> dict:
+        return self.writer(file['bucket'], file['object_name'], data)
+
     
     def writer(self, bucket: str, object_name: str, data: bytes | str) -> dict:
         """Write data to Minio and return ``True`` on success."""
@@ -51,6 +55,9 @@ class Minio(Computable):
             raise ValueError("data must be bytes or str")
         self.minio.put_object(bucket, object_name, BytesIO(data), len(data))
         return {"bucket": bucket, "object_name": object_name}
+
+    def read_s3(self, file: dict) -> Optional[Union[bytes, str]]:
+        return self.read(file['bucket'], file['object_name'], output_format=file.get('output_format', 'bytes'))
 
     def read(self, bucket: str, object_name: str, output_format: str='bytes') -> Optional[Union[bytes, str]]:
         """Read data from Minio and return it."""
@@ -92,6 +99,10 @@ class Minio(Computable):
             return self.writer(*args, **kwargs)
         elif function_name == "read":
             return self.read(*args, **kwargs)
+        elif function_name == "read_s3":
+            return self.read_s3(*args, **kwargs)
+        elif function_name == "write_s3":
+            return self.write_s3(*args, **kwargs)
         elif function_name == "delete":
             return self.delete(*args, **kwargs)
         elif function_name == "make_bucket":

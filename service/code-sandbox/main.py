@@ -1,5 +1,6 @@
 import json
 import shutil
+import signal
 import sys
 import os
 import tempfile
@@ -13,7 +14,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'
 from coper.Minio import Minio
 from core.Service import Service
 from core.Context import Context
-from core.Utils import zip_directory_to_bytes, unzip_bytes_to_directory
+from core.Utils import zip_directory_to_bytes, unzip_bytes_to_directory, copy_file_list
 from utils import clear_directory, exec_docker, build_sandbox_cmd, parse_sandbox_output
 from template import sandbox_templates
 
@@ -30,21 +31,19 @@ class InteractiveSandbox(Service):
     def close(self):
         for sid in self._session:
             self._session[sid]["container"].stop()
-            self._session[sid]["container"].close()
+            self._session[sid]["container"].remove(force=True)
             shutil.rmtree(self._session[sid]["base_dir"])
 
     def close_session(self, session_id):
         if session_id in self._session:
             self._session[session_id]["container"].stop()
-            self._session[session_id]["container"].close()
+            self._session[session_id]["container"].remove(force=True)
             shutil.rmtree(self._session[session_id]["base_dir"])
             del self._session[session_id]
         return True, "Session closed successfully"
 
-    def create_session(self, session_id):
-        if session_id in self._session:
-            return False, None
-
+    def create_session(self):
+        session_id = uuid.uuid4().hex
         base_dir = tempfile.mkdtemp()
 
         client = docker.from_env()
@@ -56,14 +55,29 @@ class InteractiveSandbox(Service):
             tty=True,
             stdin_open=True,
             detach=True,
-            pids_limit=16,
+            pids_limit=64,
             mem_limit="4096m",
+            environment={
+                "OPENBLAS_NUM_THREADS": "1",
+                "OMP_NUM_THREADS":       "1",
+            },
             cpu_count=2,
             volumes={
                 base_dir: {"bind": "/workspace", "mode": "rw"},
             }
         )
         exec_docker(container, ["chmod", "777", "/workspace"])
+
+        here_dir = os.path.abspath(__file__)
+        # 项目根目录：上溯两级到 service，再上一级到项目根
+        project_root = os.path.abspath(os.path.join(os.path.dirname(here_dir), '..', '..'))
+
+        # 将 coper 和 core 目录与 requirements.txt 复制到容器中
+        copy_file_list(project_root, base_dir, [
+            "coper", "core", "requirements.txt", "middleware/.env"
+        ])
+        # 将 requirements.txt 中的内容安装到容器中
+        exec_docker(container, ["pip", "install", "-r", "/workspace/requirements.txt"])
 
         self._session[session_id] = {
             "container": container,
@@ -101,12 +115,15 @@ class InteractiveSandbox(Service):
 
         return True, "File uploaded successfully"
 
-    def download_file(self, session_id, file, file_name):
+    def download_file(self, session_id, file, file_name=None):
         if session_id not in self._session:
             return False, "Session not found"
 
         if not file or not file.get("bucket") or not file.get("object_name"):
             return False, "Invalid file"
+
+        if not file_name:
+            file_name = file["object_name"]
 
         target_path = os.path.join(self._session[session_id]["base_dir"], file_name)
         if not os.path.exists(target_path):
@@ -117,7 +134,7 @@ class InteractiveSandbox(Service):
 
     def compute(self, command, *args, **kwargs):
         if command == "create_session":
-            return self.create_session(*args, **kwargs)
+            return self.create_session()
         elif command == "exec":
             return self.exec(*args, **kwargs)
         elif command == "upload_file":
@@ -324,23 +341,37 @@ class CodeSandbox(Service):
 
 
 if __name__ == "__main__":
-    # 读取命令行参数
     if len(sys.argv) != 2:
         print("Usage: python main.py <mode>")
         sys.exit(1)
     mode = sys.argv[1]
+
     with Context():
-        service = None
+        # choose the right service
+        if mode == "interactive":
+            service = InteractiveSandbox()
+        elif mode == "sandbox":
+            service = CodeSandbox()
+        else:
+            print(f"Unknown mode: {mode}")
+            sys.exit(1)
+
+        # define a handler that closes containers and exits
+        def _shutdown(signum, frame):
+            # be extra‐careful: catch any errors during close()
+            try:
+                service.close()
+            except Exception as e:
+                print(f"Error during shutdown: {e}", file=sys.stderr)
+            finally:
+                sys.exit(0)
+
+        # catch Ctrl-C and SIGTERM
+        signal.signal(signal.SIGINT, _shutdown)
+        signal.signal(signal.SIGTERM, _shutdown)
+
+        # now run, ensuring close() runs on all exits
         try:
-            if mode == "interactive":
-                service = InteractiveSandbox()
-            elif mode == "sandbox":
-                service = CodeSandbox()
-            else:
-                print(f"Unknown mode: {mode}")
-                sys.exit(1)
-            atexit.register(service.close)
             service.run()
         finally:
-            if service and not atexit._ncallbacks():
-                service.close()
+            service.close()

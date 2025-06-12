@@ -19,7 +19,8 @@ def get_service_dir(name):
 
 def run_cmd(cmd, cwd):
     try:
-        subprocess.run(cmd, cwd=cwd, env=os.environ, check=True)
+        os.execvpe(cmd[0], cmd, os.environ)
+        # subprocess.run(cmd, cwd=cwd, env=os.environ, check=True)
     except subprocess.CalledProcessError as e:
         abort(f"command failed (exit {e.returncode}): {' '.join(cmd)}")
 

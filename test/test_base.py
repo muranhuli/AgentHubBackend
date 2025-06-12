@@ -1,9 +1,6 @@
 import uuid
 
 if __name__ == "__main__":
-    import sys
-    import os
-
     from core.Context import Context
     from coper.basic_ops import Mul
     from coper.basic_ops import Add
