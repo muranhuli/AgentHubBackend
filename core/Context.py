@@ -62,7 +62,7 @@ class Context:
         self.minio_pass = minio_pass
 
         init_task_lua_path = os.path.join(os.path.dirname(__file__), "init_task.lua")
-        with open(init_task_lua_path, 'r') as _f:
+        with open(init_task_lua_path, 'r', encoding="utf8") as _f:
             self._init_task_lua = _f.read()
 
     def __enter__(self):
