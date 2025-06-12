@@ -19,9 +19,9 @@ type_mapping = {
 
 
 def restore_model_from_schema(schema: dict) -> type[BaseModel]:
-    '''
-        根据JSON Schema恢复Pydantic模型
-    '''
+    """
+    根据JSON Schema恢复Pydantic模型
+    """
     props = schema.get("properties", {})
     required = set(schema.get("required", []))
     fields = {}

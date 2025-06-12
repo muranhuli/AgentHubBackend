@@ -4,44 +4,5 @@
   "description": "This service allows you to search for keywords in local web pages using a specified search engine.",
   "start": {
     "script": "conda activate playwright_markitdown_env && python main.py"
-  },
-  "inputs": {
-    "keywords": {
-      "type": "string",
-      "description": "Keywords to search for in the local web pages."
-    },
-    "engine": {
-      "type": "string",
-      "default": "google",
-      "description": "Search engine to use for local web search. Default is google."
-    },
-    "max_results": {
-      "type": "integer",
-      "default": 5,
-      "description": "Maximum number of search results to return."
-    }
-  },
-  "outputs": {
-    "results": {
-      "type": "array",
-      "description": "List of search results matching the keywords.",
-      "schema": {
-        "type": "object",
-        "properties": {
-          "title": {
-            "type": "string",
-            "description": "Title of the search result."
-          },
-          "url": {
-            "type": "string",
-            "description": "URL of the search result."
-          },
-          "content": {
-            "type": "string",
-            "description": "Content of the search result."
-          }
-        }
-      }
-    }
   }
 }
