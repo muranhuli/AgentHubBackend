@@ -58,10 +58,10 @@ with Context(task_id=str(uuid.uuid4().hex)) as ctx:
 
 ```python
 # Continued from above
-    prompt = "Explain the theory of relativity in simple terms."
-    response = llm(prompt).result()
-    print(response)
-    # The 'response' will be a dictionary, typically with a 'content' key for the main text.
+prompt = "Explain the theory of relativity in simple terms."
+response = llm(prompt).result()
+print(response)
+# The 'response' will be a dictionary, typically with a 'content' key for the main text.
 ```
 
 ### Structured Output
@@ -107,20 +107,20 @@ with Context(task_id=str(uuid.uuid4().hex)) as ctx:
 
 ```python
 # Continued from above
-    text_to_embed = "Hello, world!"
-    single_vector = embedding_service(text_to_embed).result()
-    # print(f"Embedding for single text: {single_vector}")
-    # 'single_vector' will be a list of floats.
+text_to_embed = "Hello, world!"
+single_vector = embedding_service(text_to_embed).result()
+# print(f"Embedding for single text: {single_vector}")
+# 'single_vector' will be a list of floats.
 ```
 
 **Batch of Texts:**
 
 ```python
 # Continued from above
-    texts_to_embed = ["This is the first document.", "This is the second document."]
-    batch_vectors = embedding_service(texts_to_embed).result()
-    # print(f"Embeddings for batch of texts: {batch_vectors}")
-    # 'batch_vectors' will be a list of lists of floats.
+texts_to_embed = ["This is the first document.", "This is the second document."]
+batch_vectors = embedding_service(texts_to_embed).result()
+# print(f"Embeddings for batch of texts: {batch_vectors}")
+# 'batch_vectors' will be a list of lists of floats.
 ```
 
 This covers the basic usage for `LLM` and `Embedding` components. Remember to always operate within the `Context` manager.
@@ -303,21 +303,7 @@ with Context(task_id=str(uuid.uuid4().hex)) as ctx:
         print(item['title'], item['url'])
 ```
 
-## 7. Test - Simple Example
-
-The `Test` operator demonstrates chaining other operators. It adds two numbers twice.
-
-```python
-from core.Context import Context
-from coper.Test import Test
-import uuid
-
-with Context(task_id=str(uuid.uuid4().hex)) as ctx:
-    test = Test()
-    print(test(2, 3).result())  # -> 10
-```
-
-## 8. Built-in Services
+## 7. Built-in Services
 
 Two services are included under the `service/` directory. Use `service/deploy.py` to install, start or remove them.
 
