@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 
@@ -18,7 +19,8 @@ def get_service_dir(name):
 
 def run_cmd(cmd, cwd):
     try:
-        subprocess.run(cmd, cwd=cwd, check=True)
+        # env=os.environ 确保把当前所有环境变量带给 bash
+        subprocess.run(cmd, cwd=cwd, env=os.environ, check=True)
     except subprocess.CalledProcessError as e:
         abort(f"command failed (exit {e.returncode}): {' '.join(cmd)}")
 
@@ -32,27 +34,31 @@ def main():
 
     svc_dir = get_service_dir(args.service)
 
+    # 必须存在 bash
+    bash = shutil.which('bash')
+    if bash is None:
+        abort("bash not found in PATH")
+
     if args.command in ('install', 'remove'):
-        script = os.path.join(svc_dir, f"{args.command}.sh")
-        if not os.path.isfile(script):
+        script_path = os.path.join(svc_dir, f"{args.command}.sh")
+        if not os.path.isfile(script_path):
             abort(f"'{args.command}.sh' missing in {svc_dir}")
-        cmd = ['bash', script] + args.extra
+        cmd = [bash, script_path] + args.extra
 
     else:  # start
         cfg_path = os.path.join(svc_dir, 'config.json')
         custom = None
         if os.path.isfile(cfg_path):
             try:
-                with open(cfg_path, encoding='utf-8') as f:
-                    cfg = json.load(f)
+                cfg = json.load(open(cfg_path, encoding='utf-8'))
                 custom = cfg.get('start', {}).get('script')
             except Exception as e:
                 abort(f"failed to parse config.json: {e}")
 
         if custom:
-            # combine the command string and extra args
+            # '-lc' 让 bash 作为 login shell，继承环境，并执行我们传的命令行
             full = custom + (' ' + ' '.join(args.extra) if args.extra else '')
-            cmd = ['bash', '-c', full]
+            cmd = [bash, '-lc', full]
         else:
             main_py = os.path.join(svc_dir, 'main.py')
             if not os.path.isfile(main_py):
