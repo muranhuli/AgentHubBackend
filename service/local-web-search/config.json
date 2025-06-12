@@ -3,7 +3,8 @@
   "service_id": "local-web-search",
   "description": "This service allows you to search for keywords in local web pages using a specified search engine.",
   "start": {
-    "script": "conda activate playwright_markitdown_env && python main.py"
+    "script_sh": "conda activate playwright_markitdown_env && python main.py",
+    "script_ps1": "conda activate playwright_markitdown_env && python main.py",
   },
   "inputs": {
     "keywords": {
