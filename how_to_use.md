@@ -230,7 +230,7 @@ if __name__ == "__main__": # This is typically how you'd run a script.
 
 The `TTS` component converts text to speech using the MiniMax TTS API, allowing you to generate high-quality audio files from text input.
 
-We use minmax's services(https://www.minimaxi.com)
+We use MiniMax's services (<https://www.minimaxi.com>).
 
 ### Environment Configuration
 
@@ -248,9 +248,100 @@ The TTS component returns a dictionary with the following structure:
 ```python
 {
     'success': bool,      # Whether the operation succeeded
-    'filename': str,      # Absolute path to the saved audio file
+    'minio_path': {
+        'bucket': str,
+        'object_name': str
+    },
     'message': str        # Success message or error description
 }
 ```
 
-This section covers the fundamental operations for the `VectorDB` component. Ensure your vector database (e.g., Milvus) is running and accessible.
+This covers the basic usage of the TTS component.
+
+## 5. Minio - Object Storage
+
+The `Minio` operator is a simple wrapper around the MinIO SDK for reading and writing objects.
+
+```python
+from core.Context import Context
+from coper.Minio import Minio
+import uuid
+
+with Context(task_id=str(uuid.uuid4().hex)) as ctx:
+    io = Minio()
+
+    # Create a bucket
+    io('make_bucket', bucket='demo-bucket')
+
+    # Write data
+    io('write', bucket='demo-bucket', object_name='hello.txt', data=b'Hello')
+
+    # Read as bytes
+    data = io('read', bucket='demo-bucket', object_name='hello.txt').result()
+
+    # Read an image as base64 (for LLM vision models)
+    img = io('read', bucket='demo-bucket', object_name='img.png', output_format='base64').result()
+
+    # Delete file and bucket
+    io('delete', bucket='demo-bucket', object_name='hello.txt')
+    io('delete_bucket', bucket='demo-bucket')
+```
+
+## 6. Service - Invoke Registered Services
+
+`Service` lets you call a background service via RabbitMQ. Provide the service ID when creating the instance.
+
+```python
+from core.Context import Context
+from coper.Service import Service
+import uuid
+
+with Context(task_id=str(uuid.uuid4().hex)) as ctx:
+    search = Service('local-web-search')
+    results = search('AgentHub', engine='google', max_results=3).result()
+    for item in results:
+        print(item['title'], item['url'])
+```
+
+## 7. Test - Simple Example
+
+The `Test` operator demonstrates chaining other operators. It adds two numbers twice.
+
+```python
+from core.Context import Context
+from coper.Test import Test
+import uuid
+
+with Context(task_id=str(uuid.uuid4().hex)) as ctx:
+    test = Test()
+    print(test(2, 3).result())  # -> 10
+```
+
+## 8. Built-in Services
+
+Two services are included under the `service/` directory. Use `service/deploy.py` to install, start or remove them.
+
+### Code Sandbox
+
+Runs code snippets securely inside Docker containers.
+
+```bash
+# build images and prepare
+python service/deploy.py install code-sandbox
+
+# start the service ("sandbox" or "interactive" mode)
+python service/deploy.py start code-sandbox sandbox
+```
+
+Inputs and outputs are defined in `service/code-sandbox/config.json`.
+
+### Local Web Search
+
+Performs a local browser search using Playwright and returns markdown archives of the pages.
+
+```bash
+python service/deploy.py install local-web-search
+python service/deploy.py start local-web-search
+```
+
+The input/output schema is described in `service/local-web-search/config.json`.
