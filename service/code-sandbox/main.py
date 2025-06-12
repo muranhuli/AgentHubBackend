@@ -8,12 +8,11 @@ import uuid
 import docker
 import atexit
 
-from core.Context import Context
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
 from coper.Minio import Minio
 from core.Service import Service
+from core.Context import Context
 from core.Utils import zip_directory_to_bytes, unzip_bytes_to_directory
 from utils import clear_directory, exec_docker, build_sandbox_cmd, parse_sandbox_output
 from template import sandbox_templates
