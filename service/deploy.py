@@ -1,4 +1,6 @@
+#!/usr/bin/env python3
 import argparse
+import json
 import os
 import platform
 import subprocess
@@ -21,13 +23,14 @@ def run_cmd(cmd, cwd):
     except subprocess.CalledProcessError as e:
         abort(f"command failed (exit {e.returncode}): {' '.join(cmd)}")
 
-def build_command(cmd_name, script_path, extra_args):
-    if cmd_name in ('install', 'remove'):
-        if script_path.endswith('.ps1'):
-            return ['powershell', '-ExecutionPolicy', 'Bypass', '-File', script_path] + extra_args
-        return ['bash', script_path] + extra_args
-    # start 用 Python 解释器直接跑 main.py
-    return [sys.executable, script_path] + extra_args
+def build_shell_command(script_str, extra_args, use_powershell):
+    if use_powershell:
+        # PowerShell -Command 会把整个字符串当作一条命令执行
+        return ['powershell', '-ExecutionPolicy', 'Bypass', '-Command',
+                script_str + (' ' + ' '.join(extra_args) if extra_args else '')]
+    else:
+        return ['bash', '-c',
+                script_str + (' ' + ' '.join(extra_args) if extra_args else '')]
 
 def main():
     p = argparse.ArgumentParser(description='Deploy tool')
@@ -41,18 +44,38 @@ def main():
     is_windows = platform.system().lower().startswith('win')
     ext = 'ps1' if is_windows else 'sh'
 
-    # 确定脚本文件
     if args.command in ('install', 'remove'):
         script_file = f"{args.command}.{ext}"
+        script_path = os.path.join(svc_dir, script_file)
+        if not os.path.isfile(script_path):
+            abort(f"'{script_file}' missing in {svc_dir}")
+        if is_windows:
+            cmd = ['powershell', '-ExecutionPolicy', 'Bypass', '-File', script_path] + args.extra
+        else:
+            cmd = ['bash', script_path] + args.extra
+
     else:  # start
-        script_file = 'main.py'
+        # 尝试读取 config.json 中的自定义 start.script
+        config_path = os.path.join(svc_dir, 'config.json')
+        custom = None
+        if os.path.isfile(config_path):
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    cfg = json.load(f)
+                start_cfg = cfg.get('start', {})
+                custom = start_cfg.get('script')
+            except Exception as e:
+                abort(f"failed to parse config.json: {e}")
 
-    script_path = os.path.join(svc_dir, script_file)
-    if not os.path.isfile(script_path):
-        abort(f"'{script_file}' missing in {svc_dir}")
+        if custom:
+            cmd = build_shell_command(custom, args.extra, is_windows)
+        else:
+            # 回退到 main.py
+            script_path = os.path.join(svc_dir, 'main.py')
+            if not os.path.isfile(script_path):
+                abort(f"'main.py' missing in {svc_dir}")
+            cmd = [sys.executable, script_path] + args.extra
 
-    # 构造并执行命令
-    cmd = build_command(args.command, script_path, args.extra)
     run_cmd(cmd, cwd=svc_dir)
 
 if __name__ == '__main__':
