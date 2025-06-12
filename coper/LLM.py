@@ -1,8 +1,6 @@
 from core.Computable import Computable
 from dotenv import load_dotenv
-from coper.basic_ops import Mul
 import os
-import base64
 import litellm
 from typing import Optional, Union, Type
 from pydantic import BaseModel, Field, create_model
@@ -66,10 +64,6 @@ class LLMOutput(BaseModel):
 
 class LLM(Computable):
     """LLM operator based on LiteLLM."""
-
-    input_schema = LLMInput
-    output_schema = LLMOutput
-    description = "Invoke an LLM model"
 
     """
     基于LiteLLM封装的LLM调用类。

@@ -2,30 +2,13 @@ import json
 import uuid
 
 import pika
-from pydantic import BaseModel, Field
 
 from core.Computable import Computable
 from core.Utils import serialize
 
 
-class ServiceInput(BaseModel):
-    """Input model for :class:`Service`."""
-
-    args: list = Field(default_factory=list, description="Positional arguments")
-
-
-class ServiceOutput(BaseModel):
-    """Output model for :class:`Service`."""
-
-    result: object = Field(..., description="Result returned from service")
-
-
 class Service(Computable):
     """Invoke a remote service."""
-
-    input_schema = ServiceInput
-    output_schema = ServiceOutput
-    description = "Call a registered service"
 
     def __init__(self, service_id):
         super().__init__(service_id)

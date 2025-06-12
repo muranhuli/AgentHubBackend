@@ -3,29 +3,10 @@ import requests
 from core.Computable import Computable
 from typing import Union, List
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
-
-
-class EmbeddingInput(BaseModel):
-    """Input model for :class:`Embedding`."""
-
-    text: Union[str, List[str]] = Field(..., description="Text or list of texts to embed")
-
-
-class EmbeddingOutput(BaseModel):
-    """Output model for :class:`Embedding`."""
-
-    vectors: Union[List[float], List[List[float]], None] = Field(
-        ..., description="Embedding result or ``None`` if failed"
-    )
 
 
 class Embedding(Computable):
     """Generate embeddings for text."""
-
-    input_schema = EmbeddingInput
-    output_schema = EmbeddingOutput
-    description = "Compute text embeddings"
 
     def __init__(self):
         super().__init__()

@@ -3,7 +3,6 @@ from io import BytesIO
 from minio import S3Error
 
 from core.Computable import Computable
-from pydantic import BaseModel, Field
 from typing import Optional, Union
 import base64
 import os
@@ -21,28 +20,9 @@ def get_image_mime_type(file_path):
     }
     return mime_types.get(ext, 'image/jpeg')  # 默认为jpeg
 
-class MinioInput(BaseModel):
-    """Input model for Minio operations."""
-    
-    function_name: str = Field(..., description="Function to execute (write, read, delete)")
-    bucket: str = Field(..., description="Bucket name")
-    object_name: str = Field(..., description="Object key")
-    data: bytes | str = Field(..., description="Data to write or read")
-    output_format: Optional[str] = Field(default='bytes', description="Output format for read operation (bytes or base64)")
-
-class MinioOutput(BaseModel):
-    """Output model for Minio operations."""
-    
-    result: bool = Field(..., description="Write status for write operation")
-    data: Optional[Union[bytes, str]] = Field(default=None, description="Data read from Minio (if applicable)")
-
 
 class Minio(Computable):
     """Write data to a Minio bucket."""
-
-    input_schema = MinioInput
-    output_schema = MinioOutput
-    description = "Write a file to Minio"
 
     def make_bucket(self, bucket: str) -> str:
         """Create a bucket in Minio."""

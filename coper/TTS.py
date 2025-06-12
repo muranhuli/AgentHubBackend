@@ -38,10 +38,6 @@ class TTSOutput(BaseModel):
 class TTS(Computable):
     """Text-to-Speech conversion using MiniMax API."""
 
-    input_schema = TTSInput
-    output_schema = TTSOutput
-    description = "Convert text to speech using MiniMax TTS API"
-
     def __init__(self):
         super().__init__()
         self._load_env()  # Load environment variables from .env file

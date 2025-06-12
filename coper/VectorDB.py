@@ -1,24 +1,10 @@
 from pymilvus import (
-    connections,
     FieldSchema, CollectionSchema, DataType,
     Collection, utility
 )
 from typing import Optional
 from core.Computable import Computable
-from pydantic import BaseModel, Field
 
-
-class VectorDBInput(BaseModel):
-    """Input model for :class:`VectorDB`."""
-
-    function_name: str = Field(..., description="Operation type")
-    kwargs: dict = Field(default_factory=dict, description="Arguments for the operation")
-
-
-class VectorDBOutput(BaseModel):
-    """Output model for :class:`VectorDB`."""
-
-    result: object = Field(..., description="Operation result")
 
 
 class VectorDBOperations:
@@ -99,10 +85,6 @@ class VectorDBOperations:
 
 class VectorDB(Computable):
     """Perform operations on Milvus vector database."""
-
-    input_schema = VectorDBInput
-    output_schema = VectorDBOutput
-    description = "Vector database utilities"
 
     def __init__(self):
         super().__init__()
