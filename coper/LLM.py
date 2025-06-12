@@ -120,6 +120,7 @@ class LLM(Computable):
             model=self.model,
             api_key=self.api_key,
             api_base=self.base_url,
+            allowed_openai_params=['response_format'],
             response_format=structured_model,
             messages=[
                 {
@@ -151,6 +152,7 @@ class LLM(Computable):
             model=self.model,
             api_key=self.api_key,
             api_base=self.base_url,
+            allowed_openai_params=['response_format'],
             response_format=structured_model,
             messages=[
                 {

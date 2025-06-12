@@ -20,8 +20,10 @@ if __name__ == "__main__":
         # 使用 LLM 类
         # llm = LLM("volcengine/doubao-1-5-lite-32k-250115")
         # llm = LLM("volcengine/doubao-1-5-thinking-pro-250415")
+        llm = LLM("volcengine/doubao-seed-1-6-flash-250615")
         llm_vision = LLM("volcengine/doubao-1-5-thinking-vision-pro-250428")
-        llm_language = LLM("Qwen3-32B", "VLLM")
+        # llm_language = LLM("Qwen3-32B", "VLLM")
+        # llm_language = LLM("DeepSeek-R1", "SDU")
 
         # 视觉大模型测试
         prompt = "回答这个图片，说明这个图片做了什么？请用中文回答。"
@@ -31,13 +33,13 @@ if __name__ == "__main__":
             object_name="PixPin_2025-06-10_16-05-14.jpg",
             output_format="base64"
         )
-        response1 = llm_vision(prompt, image_base64).result()
+        response1 = llm(prompt, image_base64).result()
         print(f"Prompt: {prompt}\ntype: {type(response1)}\nResponse:\n{response1}")
         print('='*50)
 
         # 语言大模型测试
         prompt = "写一个Python函数，计算两个数的和，并返回结果。请用中文回答。"
-        response1 = llm_vision(prompt).result()
+        response1 = llm(prompt, structured_output=CodeAnswer.model_json_schema()).result()
         print(f"Prompt: {prompt}\ntype: {type(response1)}\nResponse:\n{response1}")
 
         end = time.time()
