@@ -2,11 +2,6 @@
   "name": "Code Runner Sandbox",
   "service_id": "code-sandbox",
   "description": "A sandbox environment for running code snippets safely.",
-  "deploy": {
-    "mode": "docker",
-    "build_script": "build",
-    "init_script": "init"
-  },
   "inputs": {
     "source_file": {
       "type": "object",

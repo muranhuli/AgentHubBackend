@@ -19,6 +19,118 @@ from utils import clear_directory, exec_docker, build_sandbox_cmd, parse_sandbox
 from template import sandbox_templates
 
 
+class InteractiveSandbox(Service):
+    def __init__(self):
+        super().__init__("interactive-sandbox")
+        self._session = {}
+        self.io = Minio()
+
+    def initialize(self):
+        pass
+
+    def close(self):
+        for sid in self._session:
+            self._session[sid]["container"].stop()
+            self._session[sid]["container"].close()
+            shutil.rmtree(self._session[sid]["base_dir"])
+
+    def close_session(self, session_id):
+        if session_id in self._session:
+            self._session[session_id]["container"].stop()
+            self._session[session_id]["container"].close()
+            shutil.rmtree(self._session[session_id]["base_dir"])
+            del self._session[session_id]
+        return True, "Session closed successfully"
+
+    def create_session(self, session_id):
+        if session_id in self._session:
+            return False, None
+
+        base_dir = tempfile.mkdtemp()
+
+        client = docker.from_env()
+        container = client.containers.run(
+            user="root",
+            image="code-sandbox",
+            name=f"interactive-sandbox-{uuid.uuid4().hex[:8]}",
+            command="/bin/bash",
+            tty=True,
+            stdin_open=True,
+            detach=True,
+            pids_limit=16,
+            mem_limit="4096m",
+            cpu_count=2,
+            volumes={
+                base_dir: {"bind": "/workspace", "mode": "rw"},
+            }
+        )
+        exec_docker(container, ["chmod", "777", "/workspace"])
+
+        self._session[session_id] = {
+            "container": container,
+            "base_dir": base_dir,
+        }
+
+        return True, session_id
+
+    def exec(self, session_id, command):
+        if session_id not in self._session:
+            return False, "Session not found"
+
+        container = self._session[session_id]["container"]
+        if isinstance(command, str):
+            command = command.split()
+        code, out, err = exec_docker(container, command, "/workspace")
+
+        return True, (out, err, code)
+
+    def upload_file(self, session_id, file):
+        if session_id not in self._session:
+            return False, "Session not found"
+
+
+        if not file or not file.get("bucket") or not file.get("object_name"):
+            return False, "Invalid file"
+
+        content = self.io.compute("read", file["bucket"], file["object_name"])
+        if len(content) == 0:
+            return False, "File not found"
+
+        target_path = os.path.join(self._session[session_id]["base_dir"], file["object_name"])
+        with open(target_path, 'wb') as f:
+            f.write(content)
+
+        return True, "File uploaded successfully"
+
+    def download_file(self, session_id, file, file_name):
+        if session_id not in self._session:
+            return False, "Session not found"
+
+        if not file or not file.get("bucket") or not file.get("object_name"):
+            return False, "Invalid file"
+
+        target_path = os.path.join(self._session[session_id]["base_dir"], file_name)
+        if not os.path.exists(target_path):
+            return False, "File not found"
+
+        content = open(target_path, 'rb').read()
+        return self.io.compute("write", file["bucket"], file["object_name"], content)
+
+    def compute(self, command, *args, **kwargs):
+        if command == "create_session":
+            return self.create_session(*args, **kwargs)
+        elif command == "exec":
+            return self.exec(*args, **kwargs)
+        elif command == "upload_file":
+            return self.upload_file(*args, **kwargs)
+        elif command == "download_file":
+            return self.download_file(*args, **kwargs)
+        elif command == "close_session":
+            return self.close_session(*args, **kwargs)
+        else:
+            raise ValueError("Invalid command")
+
+
 class CodeSandbox(Service):
 
     def __init__(self):
@@ -213,10 +325,21 @@ class CodeSandbox(Service):
 
 
 if __name__ == "__main__":
+    # 读取命令行参数
+    if len(sys.argv) != 2:
+        print("Usage: python main.py <mode>")
+        sys.exit(1)
+    mode = sys.argv[1]
     with Context():
         service = None
         try:
-            service = CodeSandbox()
+            if mode == "interactive":
+                service = InteractiveSandbox()
+            elif mode == "sandbox":
+                service = CodeSandbox()
+            else:
+                print(f"Unknown mode: {mode}")
+                sys.exit(1)
             atexit.register(service.close)
             service.run()
         finally:

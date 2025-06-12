@@ -2,11 +2,6 @@
   "name": "Local Web Search",
   "service_id": "local-web-search",
   "description": "This service allows you to search for keywords in local web pages using a specified search engine.",
-  "deploy": {
-    "mode": "conda",
-    "config_file": "environment.yml",
-    "init_script": "init"
-  },
   "inputs": {
     "keywords": {
       "type": "string",
