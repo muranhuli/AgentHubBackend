@@ -28,3 +28,6 @@ fi
 
 # 5. Install Playwright in the environment
 conda run -n playwright_markitdown_env playwright install
+
+# 6. Install additional Python packages from requirements.txt
+conda run -n playwright_markitdown_env pip install -r ../../requirements.txt
