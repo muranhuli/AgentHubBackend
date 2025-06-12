@@ -225,52 +225,98 @@ with Context(task_id=str(uuid.uuid4().hex)) as ctx:
 ## Service
 
 ### 功能简介
-用于调用后台注册的服务，通过 RabbitMQ 发送请求并同步等待结果。
+`Service` 是统一的调用接口，通过 RabbitMQ 将请求发送给后台服务并等待结果返回。
 
 ### 输入参数
-实例化时：
-- `service_id` (str)：目标服务的标识。
-调用时根据具体服务定义的参数传入。
+实例化时仅需提供服务标识：
+- `service_id` (str)：待调用的服务 ID。
+调用时根据具体服务的定义传递参数。
 
 ### 输出参数
-返回服务执行结果，类型由服务端决定；若服务报错会抛出异常。
+返回数据由服务端决定；若服务出现异常，会将异常信息转发给调用方。
 
 ### 功能说明
-在 `Context` 中创建 `Service(service_id)`，随后像普通函数一样调用即可。内部会自动处理消息队列通信。
+在 `Context` 环境内创建 `Service(service_id)`，然后像函数一样调用即可。组件会自动完成消息队列通信及结果解析。
 
-### 示例
+### 通用示例
 ```python
 from core.Context import Context
 from coper.Service import Service
 import uuid
 
 with Context(task_id=str(uuid.uuid4().hex)) as ctx:
-    search = Service("local-web-search")
-    results = search("AgentHub", engine="google", max_results=3).result()
-    for item in results:
+    svc = Service("local-web-search")
+    res = svc("AgentHub", engine="google", max_results=3).result()
+    for item in res:
         print(item["title"], item["url"])
 ```
 
-## 内置服务
-项目自带两项可部署的服务，使用 `service/deploy.py` 进行安装和启动。
+### Code Sandbox 服务
 
-### Code Sandbox
-- **作用**：在 Docker 沙箱中安全地编译/执行代码，可上传源文件与数据文件，生成输出归档。
-- **启动示例**：
-  ```bash
-  python service/deploy.py install code-sandbox
-  python service/deploy.py start code-sandbox sandbox
-  ```
-- **输入参数（compute）**：`source_file`、`data_file`、`command_file`、`output_file`，以及可选的 `execution_timeout`、`execution_memory`、`sandbox_template` 等。
-- **输出**：包含编译及运行结果的字典，同时生成的文件会写入指定的 `output_file` 中。
+#### 功能简介
+在隔离的 Docker 环境中编译并执行代码，输入和输出文件均通过 MinIO 存储。
 
-### Local Web Search
-- **作用**：调用本地浏览器执行网页搜索，返回标题、链接及页面 Markdown 内容。
-- **启动示例**：
-  ```bash
-  python service/deploy.py install local-web-search
-  python service/deploy.py start local-web-search
-  ```
-- **输入参数（compute）**：`keywords` (str)、`engine` (str，默认 `google`)、`max_results` (int)。
-- **输出**：列表，每个元素包含 `title`、`url` 与 `content` 字段。
+#### 输入参数
+- `source_file` (dict)：源码压缩包的 MinIO 路径。
+- `data_file` (dict)：可选，输入数据压缩包路径。
+- `command_file` (dict)：包含运行指令的压缩包路径。
+- `output_file` (dict)：结果输出的目标 MinIO 路径。
+- `execution_timeout` (int, 默认 `60`)：运行超时时间，单位秒。
+- `execution_memory` (int, 默认 `256`)：允许使用的内存上限（MB）。
+- `sandbox_template` (str, 默认 `"advanced"`)：编译/运行所用的模板名称。
+
+#### 输出参数
+返回字典，包含 `compilation` 与 `running` 的执行结果；若出现错误会提供 `error` 与 `error_msg` 信息，同时在 `output_file` 指定位置生成归档。
+
+#### 功能说明
+需先运行 `service/deploy.py install code-sandbox` 和 `service/deploy.py start code-sandbox sandbox` 以部署服务，之后通过 `Service("code-sandbox")` 调用。
+
+#### 示例
+```python
+with Context(task_id=str(uuid.uuid4().hex)) as ctx:
+    sandbox = Service("code-sandbox")
+    result = sandbox(
+        source_file={"bucket": "demo", "object_name": "src.zip"},
+        data_file={"bucket": "demo", "object_name": "data.zip"},
+        command_file={"bucket": "demo", "object_name": "cmd.zip"},
+        output_file={"bucket": "demo", "object_name": "out.zip"},
+        execution_timeout=60,
+        execution_memory=512,
+        sandbox_template="python-3.12",
+    ).result()
+    print(result)
+```
+
+### Local Web Search 服务
+
+#### 功能简介
+调用本地浏览器进行网页搜索，并将结果页面转换为 Markdown 文本。
+
+#### 输入参数
+- `keywords` (str)：搜索关键词。
+- `engine` (str, 默认 `"google"`)：要使用的搜索引擎。
+- `max_results` (int, 默认 `5`)：返回结果数量。
+
+#### 输出参数
+列表，每个元素包含:
+- `title` (str) - 结果标题。
+- `url` (str) - 网页地址。
+- `content` (str) - 页面内容 Markdown。
+
+#### 功能说明
+部署并启动服务：
+```bash
+python service/deploy.py install local-web-search
+python service/deploy.py start local-web-search
+```
+随后即可使用 `Service("local-web-search")` 调用。
+
+#### 示例
+```python
+with Context(task_id=str(uuid.uuid4().hex)) as ctx:
+    search = Service("local-web-search")
+    results = search("AgentHub", engine="brave", max_results=3).result()
+    for r in results:
+        print(r["title"], r["url"])
+```
 
