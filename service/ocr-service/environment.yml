@@ -1,0 +1,14 @@
+name: ocr
+channels:
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/pytorch/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+  - defaults
+dependencies:
+  - python=3.11
+  - pip:
+      - paddleocr
+      - paddlepaddle-gpu==3.0.0
+      - --extra-index-url https://www.paddlepaddle.org.cn/packages/stable/cu126/

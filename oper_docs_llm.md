@@ -320,3 +320,39 @@ with Context(task_id=str(uuid.uuid4().hex)) as ctx:
         print(r["title"], r["url"])
 ```
 
+### OCR Service 服务
+
+#### 功能简介
+调用OCR服务，识别文字
+
+#### 输入参数
+- `bucket` (str)：Minio的桶名称。
+- `object_name` (str)：待识别的文件文件名。
+
+#### 输出参数
+列表，每个元素包含:
+- `text` (str) - 识别出的文本内容
+
+参考网页：https://paddlepaddle.github.io/PaddleOCR/main/version3.x/pipeline_usage/OCR.html#22-python
+
+#### 功能说明
+部署并启动服务：
+```bash
+cd service/ocr-service
+python ../deploy.py install ocr-service
+python ../deploy.py start ocr-service
+```
+随后即可使用 `Service("ocr-service")` 调用。
+
+#### 示例
+```python
+with Context(task_id=str(uuid.uuid4())):
+    ocr = Service("ocr-service")
+    test_bucket = "test-bucket"
+    test_object = "test_ocr.pdf"
+    result = ocr(test_bucket, test_object).result()
+    print(result)
+    test_object = "test_ocr.jpg"
+    result = ocr(test_bucket, test_object).result()
+    print(result)
+```

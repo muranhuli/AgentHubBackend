@@ -1,0 +1,8 @@
+{
+  "name": "OCR Service",
+  "service_id": "ocr-service",
+  "description": "OCR Service for processing images and extracting text",
+  "start": {
+    "script": "conda activate ocr && python main.py"
+  }
+}
