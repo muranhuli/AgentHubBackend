@@ -32,11 +32,10 @@ class OCRService(Service):
         print("OCRSService initialized with PaddleOCR")
         
     def download_file(self, bucket: str, object_name: str):
-        with Context(task_id=str(uuid.uuid4())):
-            minio_client = Minio()
-            result = minio_client("read", bucket, object_name).result()
-            if not result:
-                raise FileNotFoundError(f"File not found in Minio: {bucket}/{object_name}")
+        minio_client = Minio()
+        result = minio_client.compute("read", bucket, object_name)
+        if not result:
+            raise FileNotFoundError(f"File not found in Minio: {bucket}/{object_name}")
         file_path = os.path.join("./tmp", object_name)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, "wb") as f:
