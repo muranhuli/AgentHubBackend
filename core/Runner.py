@@ -1,8 +1,7 @@
-import json
+import contextvars
 import importlib
 import multiprocessing
-
-import pika
+import threading
 
 from core.ComputableResult import ComputableResult
 from core.Context import get_context, Context
@@ -19,29 +18,29 @@ class Runner:
         self.ch.basic_consume(queue=self.ctx.queue, on_message_callback=self._on_message)
         self.ch.start_consuming()
 
-    def _on_message(self, ch, method, props, body):
+    def process_message(self, body, delivery_tag):
         """
-        job = {
-            "exec_id": "12345",
-            "task_id": "task_1",
-            "task": "example_task",
-            "args": [
-                {"is_ref": True, "exec_id": "12344"},
-                {"is_ref": False, "value": 42}
-            ]
-        }
-        redis data structure:
-        1. hash: runner-node:{task_id}
-                 job:{exec_id} string (任务定义)
-                 state:{exec_id} string (状态, 可选值: PENDING, RUNNING, FINISHED, ERROR)
-                 dep:{exec_id} string (依赖的任务 ID, 逗号隔开)
-                 dep_cnt:{exec_id} int (任务依赖计数)
-                 finish_pointer:{exec_id} string (任务完成指针, 当前任务完成时，outer才算完成)
-        2. set: runner-node-waiters:{task_id}:{exec_id} (子任务等待队列)
-        3. int: runner-node-counter:{task_id} (任务计数，用于分配 exec_id)
-        4. list: runner-node-result:{task_id}:{exec_id} string (结果 / 错误信息)
+       job = {
+           "exec_id": "12345",
+           "task_id": "task_1",
+           "task": "example_task",
+           "args": [
+               {"is_ref": True, "exec_id": "12344"},
+               {"is_ref": False, "value": 42}
+           ]
+       }
+       redis data structure:
+       1. hash: runner-node:{task_id}
+                job:{exec_id} string (任务定义)
+                state:{exec_id} string (状态, 可选值: PENDING, RUNNING, FINISHED, ERROR)
+                dep:{exec_id} string (依赖的任务 ID, 逗号隔开)
+                dep_cnt:{exec_id} int (任务依赖计数)
+                finish_pointer:{exec_id} string (任务完成指针, 当前任务完成时，outer才算完成)
+       2. set: runner-node-waiters:{task_id}:{exec_id} (子任务等待队列)
+       3. int: runner-node-counter:{task_id} (任务计数，用于分配 exec_id)
+       4. list: runner-node-result:{task_id}:{exec_id} string (结果 / 错误信息)
 
-        """
+       """
         job = deserialize(body)
         exec_id = job["exec_id"]
         task_id = job["task_id"]
@@ -98,7 +97,7 @@ class Runner:
             stack = traceback.format_exc()
             self.redis.hset(task_key, f"state:{exec_id}", "ERROR")
             self.redis.lpush(result_key, serialize({"error": str(e), "stack": stack})[1])
-            ch.basic_ack(delivery_tag=method.delivery_tag)
+            self.ctx.ack_mq_message(delivery_tag)
             print(f"任务 {exec_id} 执行失败: {e}")
             print(stack)
             # raise RuntimeError(f"任务 {exec_id} 执行失败: {e}")
@@ -127,13 +126,19 @@ class Runner:
                         cnt = self.redis.hincrby(task_key, f"dep_cnt:{cid}", -1)
                         if cnt == 0:
                             # 发布到同一个队列
-                            self.ch.basic_publish(
-                                exchange='',
-                                routing_key=self.ctx.queue,
-                                body=self.redis.hget(task_key, f"job:{cid}").encode('latin1'),
-                                properties=pika.BasicProperties(delivery_mode=2)
-                            )
-            ch.basic_ack(delivery_tag=method.delivery_tag)
+                            self.ctx.send_mq_message(self.redis.hget(task_key, f"job:{cid}").encode('latin1'))
+            self.ctx.ack_mq_message(delivery_tag)
+
+    def _on_message(self, ch, method, props, body):
+        context_for_thread = contextvars.copy_context()
+        worker_thread = threading.Thread(
+            target=self._thread_wrapper,
+            args=(context_for_thread, body, method.delivery_tag)
+        )
+        worker_thread.start()
+
+    def _thread_wrapper(self, context, body, delivery_tag):
+        context.run(self.process_message, body, delivery_tag)
 
 
 if __name__ == "__main__":

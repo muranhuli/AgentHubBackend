@@ -1,5 +1,8 @@
+import functools
 import os
 import urllib.parse
+
+from pika.exceptions import AMQPConnectionError
 from pymilvus import connections
 import redis
 import pika
@@ -45,6 +48,7 @@ class Context:
         self.amqp_para = pika.ConnectionParameters(
             host=header_address,
             port=int(rabbitmq_port),
+            heartbeat=60,
             virtual_host="/",
             credentials=credentials,
         )
@@ -65,15 +69,67 @@ class Context:
         with open(init_task_lua_path, 'r', encoding="utf8") as _f:
             self._init_task_lua = _f.read()
 
+    def mq_connect(self):
+        self._connection = pika.BlockingConnection(self.amqp_para)
+        self._channel = self._connection.channel()
+        self._channel.basic_qos(prefetch_count=1)
+        self._channel.queue_declare(queue=self.queue, durable=True)
+
+    def mq_reconnect(self):
+        if self._connection is None or self._connection.is_closed:
+            self.mq_connect()
+
+    def send_mq_message_now(self, message):
+        retry = 3
+        while retry > 0:
+            try:
+                self.__send_mq_message(message)
+                break
+            except AMQPConnectionError:
+                retry -= 1
+                self.mq_reconnect()
+                if retry == 0:
+                    raise AMQPConnectionError("Failed to publish message after retries")
+
+
+    def send_mq_message(self, message):
+        cb = functools.partial(self.__send_mq_message, message)
+        self.__add_callback(cb)
+
+    def ack_mq_message(self, delivery_tag):
+        # functools.partial 用于创建一个已预设部分参数的函数
+        cb = functools.partial(self.__ack, delivery_tag)
+        self.__add_callback(cb)
+
+    def __add_callback(self, cb):
+        retry = 3
+        while retry > 0:
+            try:
+                self._connection.add_callback_threadsafe(cb)
+                break
+            except AMQPConnectionError:
+                retry -= 1
+                self.mq_reconnect()
+                if retry == 0:
+                    raise AMQPConnectionError("Failed to publish message after retries")
+
+    def __ack(self, delivery_tag):
+        self._channel.basic_ack(delivery_tag=delivery_tag)
+
+    def __send_mq_message(self, message):
+        self._channel.basic_publish(
+            exchange='',
+            routing_key=self.queue,
+            body=message,
+            properties=pika.BasicProperties(delivery_mode=2)
+        )
+
     def __enter__(self):
         # Establish Redis connection
         self._redis = redis.Redis.from_url(self.redis_url, decode_responses=True)
         self.init_task = self.redis.register_script(self._init_task_lua)
         # Establish RabbitMQ connection and channel
-        self._connection = pika.BlockingConnection(self.amqp_para)
-        self._channel = self._connection.channel()
-        # Ensure the queue exists and is durable
-        self._channel.queue_declare(queue=self.queue, durable=True)
+        self.mq_connect()
         # Establish Minio client
         self._minio = Minio(
             self.minio_endpoint,

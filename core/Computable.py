@@ -1,5 +1,3 @@
-import pika
-
 from core.ComputableResult import ComputableResult
 from core.Context import get_context
 from core.Utils import serialize
@@ -25,8 +23,6 @@ class Computable:
     def __init__(self, *args, **kwargs):
         self.ctx = get_context()
         self.redis = self.ctx.redis
-        self.ch = self.ctx.channel
-        self.minio = self.ctx.minio
         self.init_args = args
         self.init_kwargs = kwargs
         # Copy class level descriptions so each instance carries them
@@ -77,12 +73,7 @@ class Computable:
 
         # 依赖为 0 时，直接发布到 RabbitMQ
         if dep_cnt == 0:
-            self.ch.basic_publish(
-                exchange='',
-                routing_key=self.ctx.queue,
-                body=ser_bin_job,
-                properties=pika.BasicProperties(delivery_mode=2)
-            )
+            self.ctx.send_mq_message_now(ser_bin_job)
 
         return ComputableResult(exec_id)
 
