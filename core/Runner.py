@@ -142,11 +142,16 @@ class Runner:
 
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--router", default="", help="Router name to listen to (queue: runner_task_queue_{router})")
+    args = parser.parse_args()
+
     def run():
-        with Context():
+        with Context(router=args.router):
             runner = Runner()
             runner.start()
-
 
     mpl = []
     for _ in range(16):

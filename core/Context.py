@@ -21,7 +21,7 @@ class Context:
     resetting the global ContextVar.
     """
 
-    def __init__(self, task_id=None):
+    def __init__(self, task_id=None, router: str = ""):
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         env_path = os.path.join(base_dir, 'middleware', '.env')
         load_dotenv(dotenv_path=env_path)
@@ -52,7 +52,8 @@ class Context:
             virtual_host="/",
             credentials=credentials,
         )
-        self.queue = "runner_task_queue"
+        self.router = router
+        self.queue = f"runner_task_queue_{router}" if router else "runner_task_queue"
         self._redis = None
         self._connection = None
         self._channel = None
