@@ -26,8 +26,10 @@ class Service(Computable):
             'args': args,
             'kwargs': kwargs,
         }
-
-        self.ch.basic_publish(
+        # ``Computable`` does not provide a channel attribute. Use the channel
+        # from the current context to publish the request message.
+        channel = self.ctx.channel
+        channel.basic_publish(
             exchange='',
             routing_key=f"service.request.{self.service_id}",
             body=serialize(request)[0],

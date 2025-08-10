@@ -47,6 +47,9 @@ class Service(Computable):
     def __init__(self, service_id):
         super().__init__()
         self.service_id = service_id
+        # Computable does not expose a RabbitMQ channel attribute. Retrieve it
+        # from the current context so ``run`` can interact with the queue.
+        self.ch = self.ctx.channel
 
     def _on_message(self, ch, method, properties, body):
         """
