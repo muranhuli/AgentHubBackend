@@ -7,7 +7,7 @@ from coper.Minio import Minio
 
 if __name__ == "__main__":
 
-    with Context(task_id=str(uuid.uuid4())):
+    with Context(router = "1234567890",task_id=str(uuid.uuid4())):
         
         # Test data
         test_bucket = "test-bucket"
