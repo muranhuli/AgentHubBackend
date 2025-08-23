@@ -15,13 +15,13 @@ class CodeAnswer(BaseModel):
 
 
 if __name__ == "__main__":
-    with Context(task_id=str(uuid.uuid4().hex)) as ctx:
+    with Context(task_id=str(uuid.uuid4().hex),router="1234567890") as ctx:
         start = time.time()
         # 使用 LLM 类
         # llm = LLM("volcengine/doubao-1-5-lite-32k-250115")
         # llm = LLM("volcengine/doubao-1-5-thinking-pro-250415")
-        llm = LLM("volcengine/doubao-seed-1-6-flash-250615")
-        llm_vision = LLM("volcengine/doubao-1-5-thinking-vision-pro-250428")
+        llm = LLM("volcengine/doubao-seed-1-6-250615")
+        # llm_vision = LLM("volcengine/doubao-1-5-thinking-vision-pro-250428")
         # llm_language = LLM("Qwen3-32B", "VLLM")
         # llm_language = LLM("DeepSeek-R1", "SDU")
 

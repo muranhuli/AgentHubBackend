@@ -60,7 +60,8 @@ class LLMOutput(BaseModel):
     content: Optional[str] = Field(default="", description="主要回复内容")
     reasoning_content: Optional[str] = Field(default="", description="推理过程内容")
     structured_output: Optional[Union[dict, BaseModel]] = Field(default=None, description="结构化输出")
-
+    ### 步骤 1：修改 LLMOutput，使用一个统一的 usage 字段 ###
+    usage: Optional[dict] = Field(default=None, description="API调用的token使用统计")
 
 class LLM(Computable):
     """LLM operator based on LiteLLM."""
@@ -134,6 +135,12 @@ class LLM(Computable):
             ],
             stream=False
         )
+        # 打印大模型返回内容
+        print("="*25, "RAW LLM RESPONSE (Language)", "="*25)
+        import pprint
+        pprint.pprint(response) # 使用 pprint 格式化输出，更易读
+        print("="*70)
+        # 打印代码结束
         return response
 
     def vision_llm(self, prompt: str, image_base64: str, structured_model: Optional[type[BaseModel]] = None):
@@ -169,6 +176,12 @@ class LLM(Computable):
             ],
             stream=False
         )
+        # 打印大模型返回内容
+        print("="*25, "RAW LLM RESPONSE (Vision)", "="*25)
+        import pprint
+        pprint.pprint(response) # 使用 pprint 格式化输出，更易读
+        print("="*70)
+        # 打印代码结束
         return response
 
     def compute(self, prompt: str, image_base64: Optional[str] = None, structured_output: Optional[dict] = None) -> dict:
@@ -191,6 +204,17 @@ class LLM(Computable):
         else:
             llm_response = self.vision_llm(prompt, image_base64, structured_model)
 
+        ### 步骤 2：在这里正确地提取和处理 usage 对象 ###
+        usage_obj = llm_response.get("usage")
+        usage_data = None
+        if usage_obj:
+            # 尝试将 litellm 的 Usage 对象转换为字典
+            if hasattr(usage_obj, 'model_dump'):
+                usage_data = usage_obj.model_dump()
+            elif hasattr(usage_obj, 'to_dict'): # 兼容旧版 litellm
+                usage_data = usage_obj.to_dict()
+            elif isinstance(usage_obj, dict): # 如果已经是字典
+                usage_data = usage_obj
         message = llm_response['choices'][0]['message']
         content = message.get("content", "")
         reasoning = message.get("reasoning_content", "")
@@ -204,7 +228,8 @@ class LLM(Computable):
         llm_response = LLMOutput(
             content=content if not structured_model else None,
             reasoning_content=reasoning if not structured_model else None,
-            structured_output=structured
+            structured_output=structured,
+            usage=usage_data 
         )
 
         return llm_response.model_dump()

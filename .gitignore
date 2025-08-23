@@ -11,3 +11,20 @@ middleware/minio
 middleware/milvus
 middleware/milvus-minio
 middleware/etcd
+# Python cache
+__pycache__/
+
+# Logs - 忽略所有 .log 文件
+*.log
+logs/
+
+# Local files & artifacts
+*.deb
+solutions/
+
+# IDE settings (optional but good practice)
+.vscode/
+
+# OS generated files (optional but good practice)
+.DS_Store
+Thumbs.db

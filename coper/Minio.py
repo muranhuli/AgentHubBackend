@@ -26,20 +26,21 @@ class Minio(Computable):
 
     def make_bucket(self, bucket: str) -> str:
         """Create a bucket in Minio."""
-        if not self.minio.bucket_exists(bucket):
-            self.minio.make_bucket(bucket)
+        # 修改：self.minio改为self.ctx.minio
+        if not self.ctx.minio.bucket_exists(bucket):
+            self.ctx.minio.make_bucket(bucket)
         return bucket
 
     def delete_bucket(self, bucket: str) -> str:
         """Delete a bucket in Minio."""
-        if self.minio.bucket_exists(bucket):
-            objects = self.minio.list_objects(bucket, recursive=True)
+        if self.ctx.minio.bucket_exists(bucket):
+            objects = self.ctx.minio.list_objects(bucket, recursive=True)
             delete_list = [DeleteObject(obj.object_name) for obj in objects]
-            errors = self.minio.remove_objects(bucket, delete_list)
+            errors = self.ctx.minio.remove_objects(bucket, delete_list)
             err = "\n".join(f"{error.object_name}: {error.message}" for error in errors)
             if err:
                 raise RuntimeError(f"Error deleting objects from bucket {bucket}: {err}")
-            self.minio.remove_bucket(bucket)
+            self.ctx.minio.remove_bucket(bucket)
         return bucket
 
     def write_s3(self, file: dict, data: bytes | str) -> dict:
@@ -53,7 +54,7 @@ class Minio(Computable):
             data = data.encode()
         if not isinstance(data, (bytes, bytearray)):
             raise ValueError("data must be bytes or str")
-        self.minio.put_object(bucket, object_name, BytesIO(data), len(data))
+        self.ctx.minio.put_object(bucket, object_name, BytesIO(data), len(data))
         return {"bucket": bucket, "object_name": object_name}
 
     def read_s3(self, file: dict) -> Optional[Union[bytes, str]]:
@@ -63,14 +64,14 @@ class Minio(Computable):
         """Read data from Minio and return it."""
 
         try:
-            self.minio.stat_object(bucket, object_name)
+            self.ctx.minio.stat_object(bucket, object_name)
         except S3Error as exc:
             if exc.code == 'NoSuchKey':
                 return None
             else:
                 raise exc
 
-        response = self.minio.get_object(bucket, object_name)
+        response = self.ctx.minio.get_object(bucket, object_name)
         try:
             data = response.read()
             if output_format == 'bytes':
@@ -87,7 +88,7 @@ class Minio(Computable):
     def delete(self, bucket: str, object_name: str) -> dict:
         """Delete an object from Minio and return ``True`` when done."""
         try:
-            self.minio.remove_object(bucket, object_name)
+            self.ctx.minio.remove_object(bucket, object_name)
         except Exception as e:
             raise Exception(f"Error deleting object {object_name} from bucket {bucket}: {e}")
         else:
